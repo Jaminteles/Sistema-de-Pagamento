@@ -1,0 +1,25 @@
+.pagina__titulo {
+  margin: 0 0 1.5rem;
+  font-size: 1.5rem;
+  font-weight: 500;
+}
+
+.cartoes {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.situacao {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.situacao--ok {
+  color: var(--mat-sys-primary);
+}
+
+.situacao--falha {
+  color: var(--mat-sys-error);
+}

@@ -1,0 +1,57 @@
+<h1 class="pagina__titulo">Inicio</h1>
+
+<app-estado-conteudo
+  [carregando]="carregando()"
+  [erro]="erro()"
+  mensagemCarregando="Consultando a API..."
+  (recarregar)="carregar()"
+>
+  @if (saude(); as saudeApi) {
+    <div class="cartoes">
+      <mat-card appearance="outlined">
+        <mat-card-header>
+          <mat-card-title>API</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <p
+            class="situacao"
+            [class.situacao--ok]="saudeApi.status === 'ok'"
+            [class.situacao--falha]="saudeApi.status !== 'ok'"
+          >
+            <mat-icon aria-hidden="true">
+              {{ saudeApi.status === 'ok' ? 'check_circle' : 'error_outline' }}
+            </mat-icon>
+            <span>{{ saudeApi.status === 'ok' ? 'Respondendo' : 'Degradada' }}</span>
+          </p>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card appearance="outlined">
+        <mat-card-header>
+          <mat-card-title>Banco de dados</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <p
+            class="situacao"
+            [class.situacao--ok]="saudeApi.database === 'up'"
+            [class.situacao--falha]="saudeApi.database !== 'up'"
+          >
+            <mat-icon aria-hidden="true">
+              {{ saudeApi.database === 'up' ? 'check_circle' : 'error_outline' }}
+            </mat-icon>
+            <span>{{ saudeApi.database === 'up' ? 'Conectado' : 'Indisponivel' }}</span>
+          </p>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card appearance="outlined">
+        <mat-card-header>
+          <mat-card-title>Fuso de negocio</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <p>{{ fusoNegocio }}</p>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  }
+</app-estado-conteudo>

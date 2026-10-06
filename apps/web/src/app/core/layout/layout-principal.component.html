@@ -1,0 +1,52 @@
+<mat-sidenav-container class="layout" autosize>
+  <mat-sidenav
+    class="layout__menu"
+    [mode]="modo()"
+    [opened]="aberta()"
+    [disableClose]="!celular()"
+    (closedStart)="fecharSeCelular()"
+  >
+    <div class="layout__marca">
+      <mat-icon aria-hidden="true">schedule</mat-icon>
+      <span>Ponto e Pagamento</span>
+    </div>
+
+    <mat-divider />
+
+    <mat-nav-list>
+      @for (item of itens; track item.rota) {
+        <a
+          mat-list-item
+          [routerLink]="item.rota"
+          routerLinkActive
+          #ativo="routerLinkActive"
+          [activated]="ativo.isActive"
+          (click)="fecharSeCelular()"
+        >
+          <mat-icon matListItemIcon aria-hidden="true">{{ item.icone }}</mat-icon>
+          <span matListItemTitle>{{ item.rotulo }}</span>
+        </a>
+      }
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content class="layout__conteudo">
+    <mat-toolbar class="layout__cabecalho">
+      @if (celular()) {
+        <button
+          matIconButton
+          type="button"
+          aria-label="Abrir ou fechar o menu"
+          (click)="alternarMenu()"
+        >
+          <mat-icon>menu</mat-icon>
+        </button>
+      }
+      <span class="layout__titulo">Sistema de Ponto e Pagamento</span>
+    </mat-toolbar>
+
+    <main class="layout__pagina" tabindex="-1">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

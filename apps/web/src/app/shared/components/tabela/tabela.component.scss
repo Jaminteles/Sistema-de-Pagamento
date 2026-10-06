@@ -1,0 +1,27 @@
+.tabela-rolagem {
+  width: 100%;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+}
+
+.celula--fim {
+  text-align: right;
+}
+
+.tabela--clicavel tr[mat-row] {
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--mat-sys-surface-container-high);
+  }
+}
+
+@media (max-width: 599px) {
+  .celula--oculta-celular {
+    display: none;
+  }
+}

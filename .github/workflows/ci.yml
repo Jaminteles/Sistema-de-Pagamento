@@ -1,0 +1,87 @@
+# Pipeline de CI (T-007, RNF-10): lint, testes e build em cada push.
+#
+# Os passos rodam em sequencia, um comando por vez, na mesma ordem usada na
+# validacao local. Nenhum teste chama a API real do banco: a integracao Pix
+# so e exercitada com provider fake ou sandbox (sprints 09 e 10).
+
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '24.19.0'
+
+jobs:
+  verificar:
+    name: Lint, testes e build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Formatacao (Prettier)
+        run: pnpm run format:check
+
+      # URL de descarte: validate e generate nao abrem conexao, mas o
+      # prisma.config.ts exige a variavel presente.
+      - name: Prisma validate
+        run: pnpm run prisma:validate
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
+
+      - name: Gerar client do Prisma
+        run: pnpm --filter @sistema/api exec prisma generate
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
+
+      - name: Build do pacote compartilhado
+        run: pnpm run build:shared
+
+      - name: Type check (shared)
+        run: pnpm run typecheck:shared
+
+      - name: Lint (shared)
+        run: pnpm run lint:shared
+
+      - name: Lint (api)
+        run: pnpm run lint:api
+
+      - name: Lint (web)
+        run: pnpm run lint:web
+
+      - name: Type check (api)
+        run: pnpm run typecheck:api
+
+      - name: Type check (web)
+        run: pnpm run typecheck:web
+
+      - name: Testes (api)
+        run: pnpm run test:api
+
+      - name: Testes (web)
+        run: pnpm run test:web
+
+      - name: Build (api)
+        run: pnpm run build:api
+
+      - name: Build (web)
+        run: pnpm run build:web

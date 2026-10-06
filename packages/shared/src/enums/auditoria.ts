@@ -1,0 +1,27 @@
+/**
+ * Acoes auditaveis (RF-005).
+ *
+ * Gravado como texto em log_auditoria.acao para nao exigir migration a cada nova acao.
+ * Use sempre uma das constantes abaixo; a lista espelha as acoes sensiveis do
+ * Levantamento de Requisitos.
+ */
+export const AcaoAuditoria = {
+  LOGIN: 'LOGIN',
+  USUARIO_CRIADO: 'USUARIO_CRIADO',
+  USUARIO_PERFIL_ALTERADO: 'USUARIO_PERFIL_ALTERADO',
+  SENHA_REDEFINIDA: 'SENHA_REDEFINIDA',
+  FUNCIONARIO_DADOS_PAGAMENTO_ALTERADO: 'FUNCIONARIO_DADOS_PAGAMENTO_ALTERADO',
+  PONTO_AJUSTADO: 'PONTO_AJUSTADO',
+  PERIODO_ENVIADO_RH: 'PERIODO_ENVIADO_RH',
+  PERIODO_FECHADO: 'PERIODO_FECHADO',
+  PERIODO_REABERTO: 'PERIODO_REABERTO',
+  LIQUIDOS_IMPORTADOS: 'LIQUIDOS_IMPORTADOS',
+  PAGAMENTO_AVULSO_LANCADO: 'PAGAMENTO_AVULSO_LANCADO',
+  LOTE_MONTADO: 'LOTE_MONTADO',
+  LOTE_APROVADO: 'LOTE_APROVADO',
+  LOTE_ENVIADO: 'LOTE_ENVIADO',
+  LOTE_ITEM_REENVIADO: 'LOTE_ITEM_REENVIADO',
+  CONFIGURACAO_ALTERADA: 'CONFIGURACAO_ALTERADA',
+} as const;
+
+export type AcaoAuditoria = (typeof AcaoAuditoria)[keyof typeof AcaoAuditoria];

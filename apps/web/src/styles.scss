@@ -1,0 +1,43 @@
+@use '@angular/material' as mat;
+
+html {
+  color-scheme: light dark;
+
+  // Tema Material 3. O color-scheme acima faz a troca claro/escuro conforme o
+  // sistema operacional do usuario.
+  @include mat.theme(
+    (
+      color: mat.$azure-palette,
+      typography: Roboto,
+      density: 0,
+    )
+  );
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
+}
+
+// Teclado sempre visivel: a grade de ponto precisa ser operavel sem mouse (RNF-02).
+:focus-visible {
+  outline: 2px solid var(--mat-sys-primary);
+  outline-offset: 2px;
+}
+
+.notificacao-erro {
+  --mat-snack-bar-container-color: var(--mat-sys-error-container);
+  --mdc-snackbar-supporting-text-color: var(--mat-sys-on-error-container);
+}
+
+.notificacao-sucesso {
+  --mat-snack-bar-container-color: var(--mat-sys-primary-container);
+  --mdc-snackbar-supporting-text-color: var(--mat-sys-on-primary-container);
+}

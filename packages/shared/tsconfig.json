@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Pacote ESM: o bundler do Angular consome sem bailout de otimizacao e a
+    // API (CommonJS) carrega via require(esm), suportado pelo Node 24.
+    "module": "node18",
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/.tsbuildinfo"
+  },
+  "include": ["src/**/*.ts"]
+}

@@ -1,0 +1,57 @@
+# Dependências
+node_modules/
+.pnpm-store/
+
+# Build
+dist/
+build/
+out/
+tmp/
+apps/web/.angular/
+apps/web/dist/
+apps/api/dist/
+*.tsbuildinfo
+
+# Testes
+coverage/
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
+# Ambiente e segredos (NUNCA versionar)
+.env
+.env.*
+!.env.example
+secrets/
+certs/
+*.pem
+*.p12
+*.pfx
+*.key
+*.crt
+*.cer
+*.jks
+*.keystore
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Banco / dumps
+*.sql.gz
+*.dump
+dumps/
+
+# Editores e SO
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.recommended.json
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Client gerado pelo Prisma (recriado por `prisma generate`)
+apps/api/src/generated/
