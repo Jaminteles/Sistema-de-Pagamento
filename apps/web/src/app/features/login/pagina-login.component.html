@@ -1,0 +1,53 @@
+<div class="login">
+  <mat-card class="login__cartao" appearance="outlined">
+    <mat-card-header class="login__cabecalho">
+      <mat-icon class="login__marca" aria-hidden="true">schedule</mat-icon>
+      <mat-card-title>Ponto e Pagamento</mat-card-title>
+      <mat-card-subtitle>Entre com seu e-mail e senha</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <form class="login__form" [formGroup]="form" (ngSubmit)="entrar()" novalidate>
+        <app-campo-texto
+          rotulo="E-mail"
+          tipo="email"
+          autocomplete="username"
+          inputmode="email"
+          [obrigatorio]="true"
+          [tamanhoMaximo]="tamanhoMaximoEmail"
+          [control]="form.controls.email"
+        />
+
+        <app-campo-texto
+          rotulo="Senha"
+          tipo="password"
+          autocomplete="current-password"
+          [obrigatorio]="true"
+          [tamanhoMaximo]="tamanhoMaximoSenha"
+          [control]="form.controls.senha"
+        />
+
+        @if (erro()) {
+          <p class="login__erro" role="alert">{{ erro() }}</p>
+        }
+
+        <button
+          matButton="filled"
+          type="submit"
+          class="login__enviar"
+          [disabled]="enviando()"
+        >
+          @if (enviando()) {
+            <mat-spinner diameter="20" />
+          } @else {
+            Entrar
+          }
+        </button>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <p class="login__aviso">
+    O funcionario nao acessa o sistema. Em caso de duvida, procure o RH.
+  </p>
+</div>
