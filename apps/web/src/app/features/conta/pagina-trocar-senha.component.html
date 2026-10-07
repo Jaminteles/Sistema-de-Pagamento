@@ -1,0 +1,35 @@
+<header class="pagina__cabecalho">
+  <h1 class="pagina__titulo">Trocar senha</h1>
+  <p class="pagina__descricao">
+    Ao trocar a senha, todas as suas sessoes abertas serao encerradas e voce entrara de novo.
+  </p>
+</header>
+
+<mat-card appearance="outlined" class="cartao">
+  <mat-card-content>
+    <form class="formulario" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+      <app-campo-texto
+        rotulo="Senha atual"
+        tipo="password"
+        autocomplete="current-password"
+        [obrigatorio]="true"
+        [tamanhoMaximo]="tamanhoMaximoSenha"
+        [control]="form.controls.senhaAtual"
+      />
+
+      <app-campo-texto
+        rotulo="Nova senha"
+        tipo="password"
+        autocomplete="new-password"
+        [obrigatorio]="true"
+        [tamanhoMaximo]="tamanhoMaximoSenha"
+        [control]="form.controls.novaSenha"
+        [dica]="'Minimo de ' + tamanhoMinimoSenha + ' caracteres.'"
+      />
+
+      <div class="formulario__acoes">
+        <button matButton="filled" type="submit" [disabled]="enviando()">Trocar senha</button>
+      </div>
+    </form>
+  </mat-card-content>
+</mat-card>

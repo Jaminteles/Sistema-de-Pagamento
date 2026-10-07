@@ -41,10 +41,18 @@ export default [
   },
   ...configsTemplate,
   {
-    files: ['**/*.spec.ts'],
+    files: ['**/*.ts'],
     rules: {
       // Validators.required e companhia sao funcoes estaticas do Angular:
-      // a regra aponta falso positivo ao passa-las como validador.
+      // passa-las como validador e o uso correto, nao um `this` perdido.
+      // ignoreStatic libera so esse caso; metodo de instancia solto continua erro.
+      '@typescript-eslint/unbound-method': ['error', { ignoreStatic: true }],
+    },
+  },
+  {
+    files: ['**/*.spec.ts'],
+    rules: {
+      // Nos testes, dublês passam metodos soltos de proposito.
       '@typescript-eslint/unbound-method': 'off',
     },
   },

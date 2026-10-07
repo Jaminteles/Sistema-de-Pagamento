@@ -1,0 +1,63 @@
+<header class="pagina__cabecalho">
+  <div>
+    <h1 class="pagina__titulo">Usuarios</h1>
+    <p class="pagina__descricao">Cadastro de usuarios e atribuicao de perfil.</p>
+  </div>
+
+  <button matButton="filled" type="button" (click)="novo()">
+    <mat-icon aria-hidden="true">person_add</mat-icon>
+    Novo usuario
+  </button>
+</header>
+
+<form class="filtros" [formGroup]="filtros" (ngSubmit)="aplicarFiltros()" novalidate>
+  <mat-form-field appearance="outline" class="filtros__busca">
+    <mat-label>Buscar por nome ou e-mail</mat-label>
+    <input matInput type="search" formControlName="busca" maxlength="160" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Perfil</mat-label>
+    <mat-select formControlName="perfil">
+      <mat-option [value]="null">Todos</mat-option>
+      @for (perfil of perfis; track perfil) {
+        <mat-option [value]="perfil">{{ rotuloPerfil[perfil] }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Situacao</mat-label>
+    <mat-select formControlName="ativo">
+      <mat-option [value]="null">Todas</mat-option>
+      <mat-option [value]="true">Ativo</mat-option>
+      <mat-option [value]="false">Inativo</mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <div class="filtros__acoes">
+    <button matButton="outlined" type="submit">Filtrar</button>
+    <button matButton type="button" (click)="limparFiltros()">Limpar</button>
+  </div>
+</form>
+
+<app-tabela
+  [colunas]="colunas"
+  [dados]="usuarios()"
+  [carregando]="carregando()"
+  [erro]="erro()"
+  [selecionavel]="true"
+  mensagemVazio="Nenhum usuario encontrado com esses filtros."
+  (recarregar)="carregar()"
+  (selecionar)="abrir($event)"
+/>
+
+@if (total() > 0) {
+  <mat-paginator
+    [length]="total()"
+    [pageSize]="tamanho()"
+    [pageIndex]="pagina() - 1"
+    [pageSizeOptions]="[10, 20, 50]"
+    (page)="mudarPagina($event)"
+  />
+}

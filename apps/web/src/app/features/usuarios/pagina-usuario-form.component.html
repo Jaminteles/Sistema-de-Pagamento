@@ -1,0 +1,76 @@
+<header class="pagina__cabecalho">
+  <h1 class="pagina__titulo">{{ titulo() }}</h1>
+</header>
+
+<app-estado-conteudo
+  [carregando]="carregando()"
+  [erro]="erro()"
+  mensagemCarregando="Carregando usuario..."
+>
+  <mat-card appearance="outlined" class="cartao">
+    <mat-card-content>
+      <form class="formulario" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+        <app-campo-texto
+          rotulo="Nome"
+          autocomplete="name"
+          [obrigatorio]="true"
+          [tamanhoMaximo]="tamanhoMaximoNome"
+          [control]="form.controls.nome"
+        />
+
+        <app-campo-texto
+          rotulo="E-mail"
+          tipo="email"
+          autocomplete="email"
+          inputmode="email"
+          [obrigatorio]="true"
+          [tamanhoMaximo]="tamanhoMaximoEmail"
+          [control]="form.controls.email"
+          [dica]="edicao() ? 'O e-mail nao pode ser alterado.' : null"
+        />
+
+        @if (!edicao()) {
+          <app-campo-texto
+            rotulo="Senha inicial"
+            tipo="password"
+            autocomplete="new-password"
+            [obrigatorio]="true"
+            [tamanhoMaximo]="tamanhoMaximoSenha"
+            [control]="form.controls.senha"
+            [dica]="'Minimo de ' + tamanhoMinimoSenha + ' caracteres.'"
+          />
+        }
+
+        <mat-form-field appearance="outline">
+          <mat-label>Perfil</mat-label>
+          <mat-select formControlName="perfil" [disabled]="ePropriaConta()" required>
+            @for (perfil of perfis; track perfil) {
+              <mat-option [value]="perfil">{{ rotuloPerfil[perfil] }}</mat-option>
+            }
+          </mat-select>
+          @if (ePropriaConta()) {
+            <mat-hint>Voce nao pode alterar o proprio perfil.</mat-hint>
+          }
+        </mat-form-field>
+
+        @if (edicao()) {
+          <mat-checkbox formControlName="ativo" [disabled]="ePropriaConta()">
+            Usuario ativo
+          </mat-checkbox>
+        }
+
+        <div class="formulario__acoes">
+          <button matButton="filled" type="submit" [disabled]="enviando()">Salvar</button>
+          <button matButton="outlined" type="button" (click)="cancelar()">Cancelar</button>
+
+          @if (edicao()) {
+            <button matButton type="button" class="formulario__senha" (click)="redefinirSenha()">
+              <mat-icon aria-hidden="true">key</mat-icon>
+              Redefinir senha
+            </button>
+          }
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</app-estado-conteudo>

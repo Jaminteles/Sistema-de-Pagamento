@@ -1,0 +1,28 @@
+<header class="pagina__cabecalho">
+  <h1 class="pagina__titulo">Redefinir senha</h1>
+  <p class="pagina__descricao">
+    A senha sera trocada na hora e todas as sessoes abertas do usuario serao encerradas.
+    Combine a nova senha com ele por fora do sistema.
+  </p>
+</header>
+
+<mat-card appearance="outlined" class="cartao">
+  <mat-card-content>
+    <form class="formulario" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+      <app-campo-texto
+        rotulo="Nova senha"
+        tipo="password"
+        autocomplete="new-password"
+        [obrigatorio]="true"
+        [tamanhoMaximo]="tamanhoMaximoSenha"
+        [control]="form.controls.novaSenha"
+        [dica]="'Minimo de ' + tamanhoMinimoSenha + ' caracteres.'"
+      />
+
+      <div class="formulario__acoes">
+        <button matButton="filled" type="submit" [disabled]="enviando()">Redefinir</button>
+        <button matButton="outlined" type="button" (click)="cancelar()">Cancelar</button>
+      </div>
+    </form>
+  </mat-card-content>
+</mat-card>
