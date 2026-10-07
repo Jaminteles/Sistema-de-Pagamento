@@ -14,7 +14,7 @@
     <mat-divider />
 
     <mat-nav-list>
-      @for (item of itens; track item.rota) {
+      @for (item of itens(); track item.rota) {
         <a
           mat-list-item
           [routerLink]="item.rota"
@@ -43,6 +43,35 @@
         </button>
       }
       <span class="layout__titulo">Sistema de Ponto e Pagamento</span>
+
+      @if (usuario(); as logado) {
+        <button
+          matButton
+          type="button"
+          class="layout__conta"
+          [matMenuTriggerFor]="menuConta"
+          [attr.aria-label]="'Conta de ' + logado.nome"
+        >
+          <mat-icon aria-hidden="true">account_circle</mat-icon>
+          <span class="layout__conta-nome">{{ logado.nome }}</span>
+        </button>
+
+        <mat-menu #menuConta>
+          <div class="layout__conta-info">
+            <strong>{{ logado.nome }}</strong>
+            <span>{{ rotuloPerfil() }}</span>
+          </div>
+          <mat-divider />
+          <a mat-menu-item routerLink="/conta/senha">
+            <mat-icon aria-hidden="true">key</mat-icon>
+            <span>Trocar senha</span>
+          </a>
+          <button mat-menu-item type="button" (click)="sair()">
+            <mat-icon aria-hidden="true">logout</mat-icon>
+            <span>Sair</span>
+          </button>
+        </mat-menu>
+      }
     </mat-toolbar>
 
     <main class="layout__pagina" tabindex="-1">

@@ -1,15 +1,26 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { PERFIL_USUARIO_LABEL } from '@sistema/shared';
 import { map } from 'rxjs';
-import { MENU_PRINCIPAL } from './menu-principal';
+import { AuthService } from '../auth/auth.service';
+import { ROTA_LOGIN } from '../auth/rotas-auth';
+import { menuDoPerfil } from './menu-principal';
 
 /** Abaixo disso o menu vira gaveta sobreposta (RNF-01: uso no celular da obra). */
 const LARGURA_CELULAR = '(max-width: 959.98px)';
@@ -21,6 +32,7 @@ const LARGURA_CELULAR = '(max-width: 959.98px)';
     MatDividerModule,
     MatIconModule,
     MatListModule,
+    MatMenuModule,
     MatSidenavModule,
     MatToolbarModule,
     RouterLink,
@@ -33,6 +45,9 @@ const LARGURA_CELULAR = '(max-width: 959.98px)';
 })
 export class LayoutPrincipalComponent {
   private readonly breakpoints = inject(BreakpointObserver);
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
   /** toSignal encerra a inscricao junto com o componente. */
   readonly celular = toSignal(
@@ -40,7 +55,13 @@ export class LayoutPrincipalComponent {
     { initialValue: false },
   );
 
-  readonly itens = MENU_PRINCIPAL;
+  readonly usuario = this.auth.usuario;
+  /** O menu mostra somente o que o perfil do usuario usa (T-013). */
+  readonly itens = computed(() => menuDoPerfil(this.auth.perfil()));
+  readonly rotuloPerfil = computed(() => {
+    const perfil = this.auth.perfil();
+    return perfil === null ? '' : PERFIL_USUARIO_LABEL[perfil];
+  });
 
   private readonly gavetaAberta = signal(false);
 
@@ -55,5 +76,14 @@ export class LayoutPrincipalComponent {
     if (this.celular()) {
       this.gavetaAberta.set(false);
     }
+  }
+
+  sair(): void {
+    this.auth
+      .logout()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        void this.router.navigate([ROTA_LOGIN]);
+      });
   }
 }

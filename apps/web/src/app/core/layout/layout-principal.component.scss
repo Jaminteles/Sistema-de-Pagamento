@@ -50,3 +50,25 @@
     padding: 1rem;
   }
 }
+
+.layout__conta {
+  margin-inline-start: auto;
+}
+
+.layout__conta-nome {
+  display: none;
+}
+
+.layout__conta-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+}
+
+@media (min-width: 37.5rem) {
+  .layout__conta-nome {
+    display: inline;
+  }
+}
