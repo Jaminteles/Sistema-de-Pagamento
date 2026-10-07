@@ -1,3 +1,4 @@
+import { SENHA_TAMANHO_MINIMO } from '@sistema/shared';
 import * as argon2 from 'argon2';
 
 /**
@@ -13,8 +14,8 @@ const OPCOES_ARGON2: argon2.HashOptions = {
   parallelism: 1,
 };
 
-/** Tamanho minimo aceito para uma senha do sistema. */
-export const SENHA_TAMANHO_MINIMO = 12;
+/** Tamanho minimo aceito para uma senha do sistema. Fonte unica em packages/shared. */
+export { SENHA_TAMANHO_MINIMO };
 
 // async de proposito: a validacao falha pela Promise, nunca de forma sincrona.
 export async function gerarHashSenha(senha: string): Promise<string> {

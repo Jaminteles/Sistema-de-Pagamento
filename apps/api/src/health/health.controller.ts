@@ -1,6 +1,7 @@
 import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { HealthResponse } from '@sistema/shared';
+import { Publico } from '../auth/decorators/publico.decorator';
 import { HealthService } from './health.service';
 
 /**
@@ -8,6 +9,7 @@ import { HealthService } from './health.service';
  * Nao expoe versao, variavel de ambiente nem dado de infraestrutura.
  */
 @ApiTags('Infra')
+@Publico()
 @Controller('health')
 export class HealthController {
   constructor(private readonly health: HealthService) {}

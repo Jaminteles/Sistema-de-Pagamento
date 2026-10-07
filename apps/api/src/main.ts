@@ -3,6 +3,8 @@ import 'reflect-metadata';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { API_PREFIX } from '@sistema/shared';
+import cookieParser from 'cookie-parser';
+import type { Express } from 'express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
@@ -15,6 +17,13 @@ async function bootstrap(): Promise<void> {
   const config = app.get(AppConfig);
 
   app.use(helmet());
+  // Sem segredo: o cookie de refresh nao e assinado pelo cookie-parser; sua
+  // autenticidade vem da assinatura do proprio JWT e do hash guardado no banco.
+  app.use(cookieParser());
+
+  // O Nginx do Compose repassa X-Forwarded-For. Confiar em um unico salto faz
+  // request.ip ser o IP do cliente, o que o rate limit e a auditoria usam.
+  (app.getHttpAdapter().getInstance() as Express).set('trust proxy', 1);
 
   // CORS restrito a origem do front-end; credentials por causa do cookie de refresh.
   app.enableCors({

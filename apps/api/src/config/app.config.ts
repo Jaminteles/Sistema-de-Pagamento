@@ -31,6 +31,24 @@ export class AppConfig {
     return this.config.get('SWAGGER_ENABLED', { infer: true });
   }
 
+  /** Segredo do access token. Nunca exposto na API nem em log. */
+  get jwtAccessSecret(): string {
+    return this.config.get('JWT_ACCESS_SECRET', { infer: true });
+  }
+
+  /** Segredo do refresh token. Nunca exposto na API nem em log. */
+  get jwtRefreshSecret(): string {
+    return this.config.get('JWT_REFRESH_SECRET', { infer: true });
+  }
+
+  get jwtAccessTtlSegundos(): number {
+    return this.config.get('JWT_ACCESS_TTL_SEGUNDOS', { infer: true });
+  }
+
+  get jwtRefreshTtlDias(): number {
+    return this.config.get('JWT_REFRESH_TTL_DIAS', { infer: true });
+  }
+
   get producao(): boolean {
     return this.ambiente === Ambiente.Production;
   }

@@ -7,6 +7,7 @@ import {
   IsString,
   Max,
   Min,
+  MinLength,
   validateSync,
 } from 'class-validator';
 
@@ -46,6 +47,30 @@ export class EnvironmentVariables {
   @toBoolean()
   @IsBoolean()
   SWAGGER_ENABLED = true;
+
+  /** Segredo de assinatura do access token (RNF-03). Sem padrao: faltando, nao sobe. */
+  @IsString()
+  @MinLength(32)
+  JWT_ACCESS_SECRET!: string;
+
+  /** Segredo de assinatura do refresh token. Precisa ser diferente do de acesso. */
+  @IsString()
+  @MinLength(32)
+  JWT_REFRESH_SECRET!: string;
+
+  /** Access token de curta duracao (RNF-03): 5 a 60 minutos. */
+  @Transform(({ value }) => Number(value))
+  @IsInt()
+  @Min(300)
+  @Max(3600)
+  JWT_ACCESS_TTL_SEGUNDOS = 900;
+
+  /** Validade do refresh token em dias. */
+  @Transform(({ value }) => Number(value))
+  @IsInt()
+  @Min(1)
+  @Max(30)
+  JWT_REFRESH_TTL_DIAS = 7;
 }
 
 /** Usada pelo ConfigModule: falha no boot se o ambiente estiver incompleto. */
@@ -66,6 +91,12 @@ export function validateEnv(config: Record<string, unknown>): EnvironmentVariabl
       .map((erro) => `${erro.property}: ${Object.values(erro.constraints ?? {}).join(', ')}`)
       .join('; ');
     throw new Error(`Variaveis de ambiente invalidas -> ${detalhes}`);
+  }
+
+  // Depois da validacao campo a campo: faltando um segredo, o erro util e o de
+  // variavel ausente, nao o de segredos iguais.
+  if (instance.JWT_ACCESS_SECRET === instance.JWT_REFRESH_SECRET) {
+    throw new Error('JWT_ACCESS_SECRET e JWT_REFRESH_SECRET precisam ser diferentes.');
   }
 
   return instance;

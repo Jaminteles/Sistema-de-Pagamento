@@ -6,3 +6,6 @@ export * from './enums/pagamento.js';
 export * from './enums/auditoria.js';
 export * from './contracts/api-error.js';
 export * from './contracts/health.js';
+export * from './contracts/paginacao.js';
+export * from './contracts/auth.js';
+export * from './contracts/usuario.js';

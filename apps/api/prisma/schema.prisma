@@ -166,6 +166,7 @@ model Usuario {
 
   /// Obras do encarregado (RN-05). Vazio para os outros perfis.
   obras             UsuarioObra[]
+  sessoes           SessaoRefresh[]
   ajustes           AjustePonto[]
   periodosFechados  Periodo[]       @relation("PeriodoFechadoPor")
   periodosReabertos Periodo[]       @relation("PeriodoReabertoPor")
@@ -192,6 +193,34 @@ model UsuarioObra {
   @@unique([usuarioId, obraId])
   @@index([obraId])
   @@map("usuario_obra")
+}
+
+/// Sessao de refresh token (RF-001).
+///
+/// Guarda apenas o SHA-256 do token: o valor em claro existe unicamente no
+/// cookie httpOnly do navegador, nunca e devolvido pela API nem gravado em log.
+///
+/// Cada refresh rotaciona a sessao (revoga a atual e cria outra). Apresentar o
+/// token de uma sessao ja revogada indica reuso e revoga todas as sessoes do
+/// usuario.
+model SessaoRefresh {
+  id         String    @id @default(uuid(7)) @db.Uuid
+  usuarioId  String    @map("usuario_id") @db.Uuid
+  /// SHA-256 em hexadecimal (64 caracteres) do refresh token.
+  tokenHash  String    @unique @map("token_hash") @db.VarChar(64)
+  expiraEm   DateTime  @map("expira_em") @db.Timestamptz(3)
+  revogadaEm DateTime? @map("revogada_em") @db.Timestamptz(3)
+  /// Motivo da revogacao (ROTACAO, LOGOUT, REUSO, SENHA). Sem dado pessoal.
+  motivo     String?   @db.VarChar(40)
+  ip         String?   @db.VarChar(64)
+  userAgent  String?   @map("user_agent") @db.VarChar(255)
+  criadoEm   DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, revogadaEm])
+  @@index([expiraEm])
+  @@map("sessao_refresh")
 }
 
 // ---------------------------------------------------------------------------

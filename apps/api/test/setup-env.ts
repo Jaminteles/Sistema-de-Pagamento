@@ -12,3 +12,9 @@ process.env['API_PORT'] = '3000';
 process.env['DATABASE_URL'] = 'postgresql://teste:teste@localhost:5432/teste?schema=public';
 process.env['CORS_ORIGIN'] = 'http://localhost:4200';
 process.env['SWAGGER_ENABLED'] = 'false';
+
+// Segredos de teste, sem valor real e sem relacao com qualquer ambiente.
+process.env['JWT_ACCESS_SECRET'] = 'segredo-de-teste-para-access-token-0001';
+process.env['JWT_REFRESH_SECRET'] = 'segredo-de-teste-para-refresh-token-002';
+process.env['JWT_ACCESS_TTL_SEGUNDOS'] = '900';
+process.env['JWT_REFRESH_TTL_DIAS'] = '7';
