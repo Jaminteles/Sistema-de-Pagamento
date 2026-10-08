@@ -1,33 +1,26 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  type FiltroUsuarios,
+  type FiltroObras,
   PAGINACAO_TAMANHO_MAXIMO,
   PAGINACAO_TAMANHO_PADRAO,
-  PERFIS_USUARIO,
   type ParametrosPaginacao,
-  type PerfilUsuario,
 } from '@sistema/shared';
-import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { paraBoolean, paraInteiro } from '../../common/dto/transformacoes';
 
-/** Filtros e paginacao de GET /api/usuarios. */
-export class ListarUsuariosQuery implements FiltroUsuarios, ParametrosPaginacao {
-  @ApiPropertyOptional({ description: 'Busca por nome ou e-mail' })
+/** Filtros e paginacao de GET /api/obras. */
+export class ListarObrasQuery implements FiltroObras, ParametrosPaginacao {
+  @ApiPropertyOptional({ description: 'Busca por nome ou endereco' })
   @IsOptional()
   @IsString()
   @MaxLength(160)
   busca?: string;
 
-  @ApiPropertyOptional({ enum: PERFIS_USUARIO })
-  @IsOptional()
-  @IsIn(PERFIS_USUARIO, { message: 'Perfil invalido.' })
-  perfil?: PerfilUsuario;
-
   @ApiPropertyOptional()
   @IsOptional()
   @paraBoolean()
   @IsBoolean()
-  ativo?: boolean;
+  ativa?: boolean;
 
   @ApiPropertyOptional({ minimum: 1, default: 1 })
   @IsOptional()

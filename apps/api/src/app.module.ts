@@ -8,7 +8,10 @@ import { AuditoriaInterceptor } from './common/auditoria/auditoria.interceptor';
 import { AuditoriaModule } from './common/auditoria/auditoria.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { ConfigModule } from './config/config.module';
+import { FeriadosModule } from './feriados/feriados.module';
 import { HealthModule } from './health/health.module';
+import { JornadasModule } from './jornadas/jornadas.module';
+import { ObrasModule } from './obras/obras.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
 
 /**
@@ -30,6 +33,9 @@ import { UsuariosModule } from './usuarios/usuarios.module';
     AuditoriaModule,
     AuthModule,
     UsuariosModule,
+    ObrasModule,
+    JornadasModule,
+    FeriadosModule,
     HealthModule,
   ],
   providers: [
