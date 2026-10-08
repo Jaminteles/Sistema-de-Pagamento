@@ -1,0 +1,71 @@
+@use '../../shared/styles/pagina';
+@use '../../shared/styles/formulario';
+
+.jornada {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+
+.formulario__linha {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: 1fr 1fr;
+}
+
+.formulario__grupo {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.formulario__legenda {
+  padding: 0;
+  font-size: 0.8125rem;
+  opacity: 0.75;
+}
+
+.dias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin-top: 0.25rem;
+}
+
+.semana {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.semana__dia {
+  display: grid;
+  grid-template-columns: 6rem 1fr auto;
+  gap: 0.5rem;
+  align-items: baseline;
+  padding: 0.375rem 0;
+  border-bottom: 1px solid rgb(0 0 0 / 8%);
+  font-size: 0.875rem;
+}
+
+.semana__dia--folga {
+  opacity: 0.55;
+}
+
+.semana__rotulo {
+  font-weight: 500;
+}
+
+.semana__duracao {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 64rem) {
+  .jornada {
+    grid-template-columns: minmax(0, 34rem) minmax(0, 22rem);
+  }
+}

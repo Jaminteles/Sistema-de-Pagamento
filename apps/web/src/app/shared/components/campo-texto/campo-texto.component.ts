@@ -4,7 +4,22 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { mensagemDosErros } from '../../forms/mensagem-erro';
 
-export type TipoCampoTexto = 'text' | 'email' | 'password' | 'tel' | 'number' | 'date';
+export type TipoCampoTexto =
+  | 'text'
+  | 'email'
+  | 'password'
+  | 'tel'
+  | 'number'
+  | 'date'
+  | 'time';
+
+/**
+ * Controle aceito pelo campo: texto ou numero.
+ *
+ * Campos de duracao em minutos (intervalo, tolerancia, carga) usam
+ * FormControl<number | null>; os demais, FormControl<string | null>.
+ */
+export type ControleCampoTexto = FormControl<string | null> | FormControl<number | null>;
 
 /**
  * Campo de texto padrao do projeto: rotulo, dica e mensagem de erro
@@ -50,7 +65,7 @@ export type TipoCampoTexto = 'text' | 'email' | 'password' | 'tel' | 'number' | 
 })
 export class CampoTextoComponent {
   readonly rotulo = input.required<string>();
-  readonly control = input.required<FormControl<string | null>>();
+  readonly control = input.required<ControleCampoTexto>();
   readonly tipo = input<TipoCampoTexto>('text');
   readonly dica = input<string | null>(null);
   readonly autocomplete = input<string | null>(null);

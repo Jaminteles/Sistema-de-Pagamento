@@ -1,0 +1,127 @@
+<header class="pagina__cabecalho">
+  <h1 class="pagina__titulo">{{ titulo() }}</h1>
+</header>
+
+<app-estado-conteudo
+  [carregando]="carregando()"
+  [erro]="erro()"
+  mensagemCarregando="Carregando jornada..."
+>
+  <div class="jornada">
+    <mat-card appearance="outlined" class="cartao">
+      <mat-card-content>
+        <form class="formulario" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+          <app-campo-texto
+            rotulo="Nome"
+            [obrigatorio]="true"
+            [tamanhoMaximo]="tamanhoMaximoNome"
+            [control]="form.controls.nome"
+          />
+
+          <div class="formulario__linha">
+            <app-campo-texto
+              rotulo="Entrada"
+              tipo="time"
+              [obrigatorio]="true"
+              [control]="form.controls.entrada"
+            />
+            <app-campo-texto
+              rotulo="Saida"
+              tipo="time"
+              [obrigatorio]="true"
+              [control]="form.controls.saida"
+              [dica]="viraDia() ? 'Saida no dia seguinte (turno da noite).' : null"
+            />
+          </div>
+
+          <app-campo-texto
+            rotulo="Intervalo (minutos)"
+            tipo="number"
+            inputmode="numeric"
+            [obrigatorio]="true"
+            [control]="form.controls.intervaloMinutos"
+          />
+
+          <fieldset class="formulario__grupo">
+            <legend class="formulario__legenda">Carga semanal</legend>
+            <div class="formulario__linha">
+              <app-campo-texto
+                rotulo="Horas"
+                tipo="number"
+                inputmode="numeric"
+                [obrigatorio]="true"
+                [control]="form.controls.cargaHoras"
+              />
+              <app-campo-texto
+                rotulo="Minutos"
+                tipo="number"
+                inputmode="numeric"
+                [obrigatorio]="true"
+                [control]="form.controls.cargaMinutos"
+              />
+            </div>
+          </fieldset>
+
+          <app-campo-texto
+            rotulo="Tolerancia (minutos)"
+            tipo="number"
+            inputmode="numeric"
+            [obrigatorio]="true"
+            [control]="form.controls.toleranciaMinutos"
+            [dica]="'Padrao de ' + toleranciaPadrao + ' minutos (CLT art. 58).'"
+          />
+
+          <fieldset class="formulario__grupo">
+            <legend class="formulario__legenda">Dias de trabalho</legend>
+            <div class="dias">
+              @for (dia of dias; track dia) {
+                <mat-checkbox
+                  [checked]="diaMarcado(dia)"
+                  (change)="alternarDia(dia, $event.checked)"
+                >
+                  {{ rotuloDia[dia] }}
+                </mat-checkbox>
+              }
+            </div>
+          </fieldset>
+
+          @if (edicao()) {
+            <mat-checkbox formControlName="ativa">Jornada ativa</mat-checkbox>
+            <p class="formulario__aviso">
+              Desativar tira a jornada dos novos vinculos e preserva os periodos ja apurados.
+            </p>
+          }
+
+          <div class="formulario__acoes">
+            <button matButton="filled" type="submit" [disabled]="enviando()">Salvar</button>
+            <button matButton="outlined" type="button" (click)="cancelar()">Cancelar</button>
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined" class="cartao">
+      <mat-card-header>
+        <mat-card-title class="cartao__titulo">Pre-visualizacao da semana</mat-card-title>
+        <mat-card-subtitle>
+          Horario e duracao previstos do cadastro. Extras, atrasos e adicional noturno sao
+          calculados na apuracao do periodo.
+        </mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <ul class="semana">
+          @for (item of semana(); track item.dia) {
+            <li class="semana__dia" [class.semana__dia--folga]="!item.trabalha">
+              <span class="semana__rotulo">{{ item.rotulo }}</span>
+              <span class="semana__horario">{{ item.horario }}</span>
+              @if (item.duracao) {
+                <span class="semana__duracao">{{ item.duracao }}</span>
+              }
+            </li>
+          }
+        </ul>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</app-estado-conteudo>

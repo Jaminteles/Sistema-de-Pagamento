@@ -1,0 +1,53 @@
+<header class="pagina__cabecalho">
+  <div>
+    <h1 class="pagina__titulo">Jornadas</h1>
+    <p class="pagina__descricao">Horarios, intervalo, carga semanal e tolerancia.</p>
+  </div>
+
+  <button matButton="filled" type="button" (click)="nova()">
+    <mat-icon aria-hidden="true">schedule</mat-icon>
+    Nova jornada
+  </button>
+</header>
+
+<form class="filtros" [formGroup]="filtros" (ngSubmit)="aplicarFiltros()" novalidate>
+  <mat-form-field appearance="outline" class="filtros__busca">
+    <mat-label>Buscar por nome</mat-label>
+    <input matInput type="search" formControlName="busca" maxlength="120" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Situacao</mat-label>
+    <mat-select formControlName="ativa">
+      <mat-option [value]="null">Todas</mat-option>
+      <mat-option [value]="true">Ativa</mat-option>
+      <mat-option [value]="false">Inativa</mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <div class="filtros__acoes">
+    <button matButton="outlined" type="submit">Filtrar</button>
+    <button matButton type="button" (click)="limparFiltros()">Limpar</button>
+  </div>
+</form>
+
+<app-tabela
+  [colunas]="colunas"
+  [dados]="jornadas()"
+  [carregando]="carregando()"
+  [erro]="erro()"
+  [selecionavel]="true"
+  mensagemVazio="Nenhuma jornada encontrada com esses filtros."
+  (recarregar)="carregar()"
+  (selecionar)="abrir($event)"
+/>
+
+@if (total() > 0) {
+  <mat-paginator
+    [length]="total()"
+    [pageSize]="tamanho()"
+    [pageIndex]="pagina() - 1"
+    [pageSizeOptions]="[10, 20, 50]"
+    (page)="mudarPagina($event)"
+  />
+}
