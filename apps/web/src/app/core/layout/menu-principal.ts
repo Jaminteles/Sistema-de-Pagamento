@@ -26,6 +26,25 @@ export const MENU_PRINCIPAL: readonly ItemMenu[] = [
     icone: 'group',
     perfis: ['ADMIN'],
   },
+  {
+    rota: '/obras',
+    rotulo: 'Obras e setores',
+    icone: 'apartment',
+    // O encarregado consulta as obras vinculadas a ele (RN-05).
+    perfis: ['ADMIN', 'RH', 'ENCARREGADO'],
+  },
+  {
+    rota: '/jornadas',
+    rotulo: 'Jornadas',
+    icone: 'schedule',
+    perfis: ['ADMIN', 'RH'],
+  },
+  {
+    rota: '/feriados',
+    rotulo: 'Feriados',
+    icone: 'event',
+    perfis: ['ADMIN', 'RH'],
+  },
 ];
 
 /** Itens visiveis para o perfil informado. Sem perfil, nenhum item (T-013). */

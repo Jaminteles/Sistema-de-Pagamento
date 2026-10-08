@@ -1,0 +1,89 @@
+<header class="pagina__cabecalho">
+  <h1 class="pagina__titulo">{{ titulo() }}</h1>
+</header>
+
+<app-estado-conteudo
+  [carregando]="carregando()"
+  [erro]="erro()"
+  mensagemCarregando="Carregando obra..."
+>
+  <mat-card appearance="outlined" class="cartao">
+    <mat-card-content>
+      <form class="formulario" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+        <app-campo-texto
+          rotulo="Nome"
+          [obrigatorio]="true"
+          [tamanhoMaximo]="tamanhoMaximoNome"
+          [control]="form.controls.nome"
+        />
+
+        <app-campo-texto
+          rotulo="Endereco"
+          [tamanhoMaximo]="tamanhoMaximoEndereco"
+          [control]="form.controls.endereco"
+          dica="Opcional."
+        />
+
+        @if (edicao()) {
+          <mat-checkbox formControlName="ativa">Obra ativa</mat-checkbox>
+          <p class="formulario__aviso">
+            Desativar mantem o historico de ponto e de pagamento da obra.
+          </p>
+        }
+
+        <div class="formulario__acoes">
+          <button matButton="filled" type="submit" [disabled]="enviando()">Salvar</button>
+          <button matButton="outlined" type="button" (click)="cancelar()">Cancelar</button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  @if (mostrarEncarregados()) {
+    <mat-card appearance="outlined" class="cartao">
+      <mat-card-header>
+        <mat-card-title class="cartao__titulo">Encarregados vinculados</mat-card-title>
+        <mat-card-subtitle>
+          O encarregado passa a ver e lancar o ponto somente dos funcionarios das obras vinculadas a
+          ele.
+        </mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <form [formGroup]="formEncarregados" (ngSubmit)="salvarEncarregados()" novalidate>
+          <mat-form-field appearance="outline" class="campo">
+            <mat-label>Encarregados</mat-label>
+            <mat-select formControlName="usuariosIds" multiple>
+              @for (usuario of encarregadosDisponiveis(); track usuario.id) {
+                <mat-option [value]="usuario.id">{{ usuario.nome }}</mat-option>
+              }
+            </mat-select>
+            @if (encarregadosDisponiveis().length === 0 && !carregandoEncarregados()) {
+              <mat-hint>Nenhum usuario com perfil Encarregado ativo.</mat-hint>
+            }
+          </mat-form-field>
+
+          @if (vinculados().length > 0) {
+            <ul class="vinculados">
+              @for (item of vinculados(); track item.usuarioId) {
+                <li class="vinculados__item">
+                  <mat-icon aria-hidden="true">engineering</mat-icon>
+                  <span>{{ item.nome }}</span>
+                  @if (!item.ativo) {
+                    <span class="vinculados__inativo">(inativo)</span>
+                  }
+                </li>
+              }
+            </ul>
+          }
+
+          <div class="formulario__acoes">
+            <button matButton="filled" type="submit" [disabled]="salvandoEncarregados()">
+              Salvar vinculos
+            </button>
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  }
+</app-estado-conteudo>

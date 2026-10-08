@@ -1,0 +1,22 @@
+@use '../../shared/styles/pagina';
+@use '../../shared/styles/formulario';
+
+.vinculados {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.vinculados__item {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+}
+
+.vinculados__inativo {
+  opacity: 0.6;
+}

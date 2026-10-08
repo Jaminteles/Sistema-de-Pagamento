@@ -1,0 +1,33 @@
+// Estrutura comum dos formularios em cartao.
+
+.cartao {
+  max-width: 34rem;
+  margin-bottom: 1rem;
+}
+
+.cartao__titulo {
+  font-size: 1.125rem;
+}
+
+.campo {
+  width: 100%;
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.formulario__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.formulario__aviso {
+  margin: 0;
+  font-size: 0.8125rem;
+  opacity: 0.75;
+}
