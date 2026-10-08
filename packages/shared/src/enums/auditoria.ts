@@ -22,6 +22,7 @@ export const AcaoAuditoria = {
   LOTE_ENVIADO: 'LOTE_ENVIADO',
   LOTE_ITEM_REENVIADO: 'LOTE_ITEM_REENVIADO',
   CONFIGURACAO_ALTERADA: 'CONFIGURACAO_ALTERADA',
+  OBRA_ENCARREGADOS_ALTERADOS: 'OBRA_ENCARREGADOS_ALTERADOS',
 } as const;
 
 export type AcaoAuditoria = (typeof AcaoAuditoria)[keyof typeof AcaoAuditoria];
