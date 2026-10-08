@@ -1,0 +1,178 @@
+<header class="pagina__cabecalho">
+  <div>
+    <h1 class="pagina__titulo">Calendario de feriados</h1>
+    <p class="pagina__descricao">
+      Clique num dia para cadastrar ou editar. Feriado conta como hora extra a 100% na apuracao.
+    </p>
+  </div>
+
+  <div class="ano">
+    <button matIconButton type="button" aria-label="Ano anterior" (click)="mudarAno(-1)">
+      <mat-icon aria-hidden="true">chevron_left</mat-icon>
+    </button>
+    <strong class="ano__valor">{{ ano() }}</strong>
+    <button matIconButton type="button" aria-label="Proximo ano" (click)="mudarAno(1)">
+      <mat-icon aria-hidden="true">chevron_right</mat-icon>
+    </button>
+
+    <button
+      matButton="outlined"
+      type="button"
+      [disabled]="carregandoNacionais()"
+      (click)="carregarNacionais()"
+    >
+      <mat-icon aria-hidden="true">event_available</mat-icon>
+      Carregar feriados nacionais
+    </button>
+  </div>
+</header>
+
+@if (formAberto()) {
+  <mat-card appearance="outlined" class="cartao">
+    <mat-card-header>
+      <mat-card-title class="cartao__titulo">{{ tituloForm() }}</mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <form class="formulario" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+        <app-campo-texto
+          rotulo="Data"
+          tipo="date"
+          [obrigatorio]="true"
+          [control]="form.controls.data"
+        />
+
+        <app-campo-texto
+          rotulo="Descricao"
+          [obrigatorio]="true"
+          [tamanhoMaximo]="tamanhoMaximoDescricao"
+          [control]="form.controls.descricao"
+        />
+
+        <mat-form-field appearance="outline" class="campo">
+          <mat-label>Abrangencia</mat-label>
+          <mat-select formControlName="abrangencia" required>
+            @for (item of abrangencias; track item) {
+              <mat-option [value]="item">{{ rotuloAbrangencia[item] }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        @if (exigeUf()) {
+          <app-campo-texto
+            rotulo="UF"
+            [obrigatorio]="true"
+            [tamanhoMaximo]="2"
+            [control]="form.controls.uf"
+            dica="Sigla com 2 letras."
+          />
+        }
+
+        @if (exigeMunicipio()) {
+          <app-campo-texto
+            rotulo="Municipio"
+            [obrigatorio]="true"
+            [tamanhoMaximo]="tamanhoMaximoMunicipio"
+            [control]="form.controls.municipio"
+          />
+        }
+
+        <div class="formulario__acoes">
+          <button matButton="filled" type="submit" [disabled]="enviando()">Salvar</button>
+          <button matButton="outlined" type="button" (click)="fechar()">Cancelar</button>
+
+          @if (emEdicao()) {
+            <button
+              matButton
+              type="button"
+              class="formulario__remover"
+              [disabled]="enviando()"
+              (click)="remover()"
+            >
+              <mat-icon aria-hidden="true">delete</mat-icon>
+              Remover
+            </button>
+          }
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+}
+
+@if (carregando()) {
+  <p class="aviso" role="status" aria-live="polite">Carregando o calendario de {{ ano() }}...</p>
+} @else if (erro()) {
+  <div class="aviso aviso--erro" role="alert">
+    <p>{{ erro() }}</p>
+    <button matButton="outlined" type="button" (click)="carregar()">Tentar novamente</button>
+  </div>
+} @else {
+  @if (feriados().length === 0) {
+    <p class="aviso">
+      Nenhum feriado cadastrado em {{ ano() }}. Use "Carregar feriados nacionais" para a carga
+      inicial.
+    </p>
+  }
+
+  <div class="calendario">
+    @for (mes of meses(); track mes.mes) {
+      <section class="mes">
+        <h2 class="mes__titulo">{{ mes.rotulo }}</h2>
+
+        <div class="mes__semana" aria-hidden="true">
+          @for (dia of cabecalhoSemana; track dia) {
+            <span class="mes__cabecalho">{{ dia }}</span>
+          }
+        </div>
+
+        <div class="mes__grade">
+          @for (celula of mes.celulas; track $index) {
+            @if (celula.dia === null) {
+              <span class="dia dia--vazio"></span>
+            } @else {
+              <button
+                type="button"
+                class="dia"
+                [class.dia--feriado]="feriadoDoDia(celula.dataIso)"
+                [class.dia--fimDeSemana]="celula.diaSemana >= 6"
+                [attr.title]="descricaoDoDia(celula.dataIso)"
+                [attr.aria-label]="
+                  celula.dataIso +
+                  (descricaoDoDia(celula.dataIso) ? ': ' + descricaoDoDia(celula.dataIso) : '')
+                "
+                (click)="selecionarDia(celula.dataIso)"
+              >
+                {{ celula.dia }}
+              </button>
+            }
+          }
+        </div>
+      </section>
+    }
+  </div>
+
+  @if (feriados().length > 0) {
+    <section class="lista">
+      <h2 class="lista__titulo">Feriados de {{ ano() }}</h2>
+      <ul class="lista__itens">
+        @for (feriado of feriados(); track feriado.id) {
+          <li class="lista__item">
+            <button type="button" class="lista__botao" (click)="abrirEdicao(feriado)">
+              <span class="lista__data">{{ feriado.data }}</span>
+              <span class="lista__descricao">{{ feriado.descricao }}</span>
+              <span class="lista__abrangencia">
+                {{ rotuloAbrangencia[feriado.abrangencia] }}
+                @if (feriado.uf) {
+                  - {{ feriado.uf }}
+                }
+                @if (feriado.municipio) {
+                  / {{ feriado.municipio }}
+                }
+              </span>
+            </button>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+}
