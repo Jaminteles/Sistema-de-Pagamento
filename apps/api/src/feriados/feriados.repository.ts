@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { AbrangenciaFeriado } from '@sistema/shared';
+import { dataIsoParaDate, dateParaDataIso } from '../common/data/data-iso';
 import { PrismaService } from '../common/prisma/prisma.service';
 
 const CAMPOS_PUBLICOS = {
@@ -36,17 +37,9 @@ export interface FiltroFeriados {
   busca?: string;
 }
 
-/**
- * `data` e uma coluna `date`: convertida sempre em UTC para que o dia gravado
- * seja exatamente o informado, sem deslocamento de fuso.
- */
-export function dataIsoParaDate(iso: string): Date {
-  return new Date(`${iso}T00:00:00.000Z`);
-}
-
-export function dateParaDataIso(data: Date): string {
-  return data.toISOString().slice(0, 10);
-}
+// `data` e uma coluna `date`: a conversao sempre em UTC vive em common/data,
+// compartilhada com os outros modulos que gravam dia de calendario.
+export { dataIsoParaDate, dateParaDataIso };
 
 /** Acesso ao banco do calendario de feriados (RF-011). */
 @Injectable()

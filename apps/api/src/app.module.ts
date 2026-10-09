@@ -9,6 +9,7 @@ import { AuditoriaModule } from './common/auditoria/auditoria.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { ConfigModule } from './config/config.module';
 import { FeriadosModule } from './feriados/feriados.module';
+import { FuncionariosModule } from './funcionarios/funcionarios.module';
 import { HealthModule } from './health/health.module';
 import { JornadasModule } from './jornadas/jornadas.module';
 import { ObrasModule } from './obras/obras.module';
@@ -36,6 +37,7 @@ import { UsuariosModule } from './usuarios/usuarios.module';
     ObrasModule,
     JornadasModule,
     FeriadosModule,
+    FuncionariosModule,
     HealthModule,
   ],
   providers: [

@@ -1,5 +1,7 @@
 export * from './constants.js';
 export * from './tempo.js';
+export * from './cpf.js';
+export * from './pix.js';
 export * from './enums/perfil-usuario.js';
 export * from './enums/cadastros.js';
 export * from './enums/ponto.js';
@@ -11,5 +13,6 @@ export * from './contracts/paginacao.js';
 export * from './contracts/auth.js';
 export * from './contracts/usuario.js';
 export * from './contracts/obra.js';
+export * from './contracts/funcionario.js';
 export * from './contracts/jornada.js';
 export * from './contracts/feriado.js';
