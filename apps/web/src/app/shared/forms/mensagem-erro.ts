@@ -22,6 +22,8 @@ const MENSAGENS: Record<string, (erro: unknown) => string> = {
   min: (erro) => `Valor minimo: ${String((erro as { min: number }).min)}.`,
   max: (erro) => `Valor maximo: ${String((erro as { max: number }).max)}.`,
   pattern: () => 'Formato invalido.',
+  cpf: () => 'CPF invalido.',
+  chavePix: () => 'Chave Pix invalida para o tipo escolhido.',
 };
 
 /**

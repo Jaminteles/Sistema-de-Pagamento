@@ -1,0 +1,47 @@
+@use '../../shared/styles/pagina';
+@use '../../shared/styles/formulario';
+
+.abas {
+  margin-bottom: 1rem;
+}
+
+.cartao {
+  margin-top: 1rem;
+}
+
+.vinculos {
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.vinculos__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.vinculos__texto {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9375rem;
+}
+
+.vinculos__texto small {
+  opacity: 0.7;
+}
+
+.encerrar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.encerrar .campo {
+  flex: 1 1 12rem;
+}

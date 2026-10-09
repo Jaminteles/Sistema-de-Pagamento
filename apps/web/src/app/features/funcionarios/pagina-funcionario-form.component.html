@@ -1,0 +1,258 @@
+<header class="pagina__cabecalho">
+  <div>
+    <h1 class="pagina__titulo">{{ titulo() }}</h1>
+    @if (funcionario(); as atual) {
+      <p class="pagina__descricao">Matricula {{ atual.matricula }} &middot; CPF {{ atual.cpf }}</p>
+    }
+  </div>
+</header>
+
+<app-estado-conteudo
+  [carregando]="carregando()"
+  [erro]="erro()"
+  mensagemCarregando="Carregando funcionario..."
+>
+  <mat-tab-group class="abas" animationDuration="0ms">
+    <mat-tab label="Dados">
+      <mat-card appearance="outlined" class="cartao">
+        <mat-card-content>
+          <form class="formulario" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+            <app-campo-texto
+              rotulo="Nome"
+              [obrigatorio]="true"
+              [tamanhoMaximo]="tamanhoMaximoNome"
+              [control]="form.controls.nome"
+            />
+
+            <app-campo-texto
+              rotulo="CPF"
+              [obrigatorio]="true"
+              inputmode="numeric"
+              [control]="form.controls.cpf"
+              [dica]="edicao() ? 'O CPF nao e alteravel apos o cadastro.' : 'Com ou sem pontuacao.'"
+            />
+
+            <app-campo-texto
+              rotulo="Matricula"
+              [obrigatorio]="true"
+              [tamanhoMaximo]="tamanhoMaximoMatricula"
+              [control]="form.controls.matricula"
+            />
+
+            <app-campo-texto
+              rotulo="Cargo"
+              [tamanhoMaximo]="tamanhoMaximoCargo"
+              [control]="form.controls.cargo"
+              dica="Opcional."
+            />
+
+            <app-campo-texto
+              rotulo="Admissao"
+              tipo="date"
+              [obrigatorio]="true"
+              [control]="form.controls.admissao"
+            />
+
+            @if (edicao()) {
+              <mat-form-field appearance="outline" class="campo">
+                <mat-label>Situacao</mat-label>
+                <mat-select formControlName="situacao">
+                  @for (situacao of situacoes; track situacao) {
+                    <mat-option [value]="situacao">{{ rotuloSituacao[situacao] }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <app-campo-texto
+                rotulo="Desligamento"
+                tipo="date"
+                [control]="form.controls.desligamento"
+                dica="Obrigatorio na situacao Desligado. O historico anterior continua visivel."
+              />
+            }
+
+            <div class="formulario__acoes">
+              <button matButton="filled" type="submit" [disabled]="enviando()">Salvar</button>
+              <button matButton="outlined" type="button" (click)="cancelar()">Cancelar</button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    </mat-tab>
+
+    <mat-tab label="Pagamento" [disabled]="!edicao()">
+      <mat-card appearance="outlined" class="cartao">
+        <mat-card-header>
+          <mat-card-title class="cartao__titulo">Dados de pagamento</mat-card-title>
+          <mat-card-subtitle>
+            Sem chave Pix ou conta valida o funcionario nao entra em lote de pagamento.
+          </mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-card-content>
+          @if (pagamento(); as dados) {
+            @if (dados.mascarado) {
+              <p class="formulario__aviso" role="note">
+                Seu perfil ve apenas a mascara dos dados bancarios.
+                @if (dados.chavePixMascara) {
+                  Chave: {{ dados.chavePixMascara }}.
+                }
+                @if (dados.contaMascara) {
+                  Conta: {{ dados.contaMascara }}.
+                }
+              </p>
+            } @else {
+              <form
+                class="formulario"
+                [formGroup]="formPagamento"
+                (ngSubmit)="salvarPagamento()"
+                novalidate
+              >
+                <mat-form-field appearance="outline" class="campo">
+                  <mat-label>Tipo da chave Pix</mat-label>
+                  <mat-select formControlName="tipoChave">
+                    <mat-option [value]="null">Sem chave Pix</mat-option>
+                    @for (tipo of tiposChave; track tipo) {
+                      <mat-option [value]="tipo">{{ rotuloTipoChave[tipo] }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+
+                <app-campo-texto
+                  rotulo="Chave Pix"
+                  [tamanhoMaximo]="tamanhoMaximoChave"
+                  [control]="formPagamento.controls.chavePix"
+                />
+
+                <app-campo-texto
+                  rotulo="Banco"
+                  inputmode="numeric"
+                  [tamanhoMaximo]="tamanhoMaximoBanco"
+                  [control]="formPagamento.controls.banco"
+                  dica="Codigo do banco, somente digitos."
+                />
+
+                <app-campo-texto
+                  rotulo="Agencia"
+                  inputmode="numeric"
+                  [tamanhoMaximo]="tamanhoMaximoAgencia"
+                  [control]="formPagamento.controls.agencia"
+                />
+
+                <app-campo-texto
+                  rotulo="Conta"
+                  inputmode="numeric"
+                  [tamanhoMaximo]="tamanhoMaximoConta"
+                  [control]="formPagamento.controls.conta"
+                />
+
+                <p class="formulario__aviso">
+                  Banco, agencia e conta andam juntos. Deixe tudo em branco para limpar o cadastro.
+                </p>
+
+                <div class="formulario__acoes">
+                  <button matButton="filled" type="submit" [disabled]="salvandoPagamento()">
+                    Salvar pagamento
+                  </button>
+                </div>
+              </form>
+            }
+          } @else if (!carregandoPagamento()) {
+            <p class="formulario__aviso">
+              Seu perfil nao tem acesso aos dados de pagamento deste funcionario.
+            </p>
+          }
+        </mat-card-content>
+      </mat-card>
+    </mat-tab>
+
+    <mat-tab label="Vinculos" [disabled]="!edicao()">
+      <mat-card appearance="outlined" class="cartao">
+        <mat-card-header>
+          <mat-card-title class="cartao__titulo">Obra e jornada</mat-card-title>
+          <mat-card-subtitle>
+            So existe um vinculo aberto por vez. Encerre o atual antes de abrir outro.
+          </mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-card-content>
+          @if (vinculos().length > 0) {
+            <ul class="vinculos">
+              @for (vinculo of vinculos(); track vinculo.id) {
+                <li class="vinculos__item">
+                  <mat-icon aria-hidden="true">apartment</mat-icon>
+                  <span class="vinculos__texto">
+                    {{ vinculo.obraNome }} &middot; {{ vinculo.jornadaNome }}
+                    <small>
+                      {{ vinculo.inicioVigencia }} ate
+                      {{ vinculo.fimVigencia ?? 'em aberto' }}
+                    </small>
+                  </span>
+                </li>
+              }
+            </ul>
+          } @else if (!carregandoVinculos()) {
+            <p class="formulario__aviso">Nenhum vinculo cadastrado.</p>
+          }
+
+          @if (vinculoAberto(); as aberto) {
+            <form class="encerrar" (ngSubmit)="encerrarVinculo(aberto, fim.value)" novalidate>
+              <mat-form-field appearance="outline" class="campo">
+                <mat-label>Encerrar o vinculo aberto em</mat-label>
+                <input matInput type="date" #fim required />
+              </mat-form-field>
+              <button matButton="outlined" type="submit" [disabled]="salvandoVinculo()">
+                Encerrar
+              </button>
+            </form>
+          }
+
+          <form
+            class="formulario"
+            [formGroup]="formVinculo"
+            (ngSubmit)="adicionarVinculo()"
+            novalidate
+          >
+            <mat-form-field appearance="outline" class="campo">
+              <mat-label>Obra</mat-label>
+              <mat-select formControlName="obraId" required>
+                @for (obra of obras(); track obra.id) {
+                  <mat-option [value]="obra.id">{{ obra.nome }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="campo">
+              <mat-label>Jornada</mat-label>
+              <mat-select formControlName="jornadaId" required>
+                @for (jornada of jornadas(); track jornada.id) {
+                  <mat-option [value]="jornada.id">{{ jornada.nome }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <app-campo-texto
+              rotulo="Inicio da vigencia"
+              tipo="date"
+              [obrigatorio]="true"
+              [control]="formVinculo.controls.inicioVigencia"
+            />
+
+            <app-campo-texto
+              rotulo="Fim da vigencia"
+              tipo="date"
+              [control]="formVinculo.controls.fimVigencia"
+              dica="Deixe em branco para vinculo em aberto."
+            />
+
+            <div class="formulario__acoes">
+              <button matButton="filled" type="submit" [disabled]="salvandoVinculo()">
+                Adicionar vinculo
+              </button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    </mat-tab>
+  </mat-tab-group>
+</app-estado-conteudo>
