@@ -1,0 +1,46 @@
+@use '../../shared/styles/pagina';
+@use '../../shared/styles/formulario';
+
+.cartao--largo {
+  max-width: none;
+}
+
+.envio {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.envio__campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.envio__rotulo {
+  opacity: 0.75;
+}
+
+.envio__erro {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+  color: var(--mat-sys-error, #b3261e);
+}
+
+.resumo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9375rem;
+}
+
+.secao {
+  margin: 1.5rem 0 0.5rem;
+  font-size: 1.125rem;
+}

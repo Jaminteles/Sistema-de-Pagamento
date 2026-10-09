@@ -1,0 +1,91 @@
+<header class="pagina__cabecalho">
+  <div>
+    <h1 class="pagina__titulo">Importar funcionarios</h1>
+    <p class="pagina__descricao">
+      Pre-visualize antes de gravar: a previa usa a mesma validacao da importacao.
+    </p>
+  </div>
+
+  <button matButton="outlined" type="button" (click)="voltar()">Voltar</button>
+</header>
+
+<mat-card appearance="outlined" class="cartao cartao--largo">
+  <mat-card-content>
+    <p class="formulario__aviso">
+      Arquivo {{ extensoes }}, ate {{ tamanhoMaximoMb }} MB e {{ maximoLinhas }} linhas. Colunas do
+      cabecalho: {{ colunasEsperadas }} (cargo e opcional). Datas em AAAA-MM-DD ou DD/MM/AAAA.
+    </p>
+
+    <div class="envio">
+      <label class="envio__campo">
+        <span class="envio__rotulo">Planilha</span>
+        <input type="file" [accept]="extensoes" (change)="selecionar($event)" />
+      </label>
+
+      <button
+        matButton="filled"
+        type="button"
+        [disabled]="arquivo() === null || enviando()"
+        (click)="previsualizar()"
+      >
+        <mat-icon aria-hidden="true">preview</mat-icon>
+        Pre-visualizar
+      </button>
+
+      <button
+        matButton="filled"
+        type="button"
+        [disabled]="!podeConfirmar() || enviando()"
+        (click)="confirmar()"
+      >
+        <mat-icon aria-hidden="true">save</mat-icon>
+        Confirmar importacao
+      </button>
+    </div>
+
+    @if (erro(); as mensagem) {
+      <p class="envio__erro" role="alert">{{ mensagem }}</p>
+    }
+  </mat-card-content>
+</mat-card>
+
+@if (relatorio(); as resultado) {
+  <mat-card appearance="outlined" class="cartao cartao--largo">
+    <mat-card-content>
+      <ul class="resumo">
+        <li><strong>{{ resultado.totalLinhas }}</strong> linhas lidas</li>
+        <li>
+          <strong>{{ resultado.criados }}</strong>
+          {{ resultado.simulacao ? 'serao criados' : 'criados' }}
+        </li>
+        <li><strong>{{ resultado.ignorados }}</strong> ja cadastrados</li>
+        <li><strong>{{ resultado.comErro }}</strong> com erro</li>
+      </ul>
+
+      @if (importado()) {
+        <p class="formulario__aviso" role="status">Importacao concluida.</p>
+      } @else if (resultado.simulacao) {
+        <p class="formulario__aviso">
+          Nada foi gravado ainda. Linhas com erro nao sao importadas; corrija a planilha e
+          pre-visualize de novo se quiser inclui-las.
+        </p>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  @if (resultado.erros.length > 0) {
+    <h2 class="secao">Linhas recusadas</h2>
+    <app-tabela
+      [colunas]="colunasErro"
+      [dados]="resultado.erros"
+      mensagemVazio="Nenhum problema encontrado."
+    />
+  }
+
+  <h2 class="secao">Linhas aceitas</h2>
+  <app-tabela
+    [colunas]="colunas"
+    [dados]="resultado.itens"
+    mensagemVazio="Nenhuma linha valida na planilha."
+  />
+}
