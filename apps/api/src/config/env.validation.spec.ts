@@ -11,6 +11,8 @@ const ambienteValido = {
   JWT_REFRESH_SECRET: 'segredo-de-teste-para-refresh-token-002',
   JWT_ACCESS_TTL_SEGUNDOS: '900',
   JWT_REFRESH_TTL_DIAS: '7',
+  // Chave de criptografia dos dados de pagamento (RNF-04): 32 bytes de teste.
+  DADOS_PAGAMENTO_CHAVE: Buffer.alloc(32, 7).toString('base64'),
 };
 
 describe('validateEnv', () => {
@@ -68,5 +70,20 @@ describe('validateEnv', () => {
     expect(() => validateEnv({ ...ambienteValido, JWT_ACCESS_TTL_SEGUNDOS: '86400' })).toThrow(
       /JWT_ACCESS_TTL_SEGUNDOS/,
     );
+  });
+
+  it('falha quando DADOS_PAGAMENTO_CHAVE esta ausente (RNF-04)', () => {
+    const { DADOS_PAGAMENTO_CHAVE: _ignorado, ...incompleto } = ambienteValido;
+
+    expect(() => validateEnv(incompleto)).toThrow(/DADOS_PAGAMENTO_CHAVE/);
+  });
+
+  it('recusa chave de criptografia fora dos 32 bytes exigidos pelo AES-256', () => {
+    expect(() =>
+      validateEnv({
+        ...ambienteValido,
+        DADOS_PAGAMENTO_CHAVE: Buffer.alloc(16, 7).toString('base64'),
+      }),
+    ).toThrow(/32 bytes/);
   });
 });

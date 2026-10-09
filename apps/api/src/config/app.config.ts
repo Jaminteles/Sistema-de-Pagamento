@@ -49,6 +49,14 @@ export class AppConfig {
     return this.config.get('JWT_REFRESH_TTL_DIAS', { infer: true });
   }
 
+  /**
+   * Chave da criptografia dos dados de pagamento (RNF-04). Lida apenas pelo
+   * CriptografiaService; nunca exposta na API nem em log.
+   */
+  get dadosPagamentoChave(): string {
+    return this.config.get('DADOS_PAGAMENTO_CHAVE', { infer: true });
+  }
+
   get producao(): boolean {
     return this.ambiente === Ambiente.Production;
   }

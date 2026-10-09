@@ -18,3 +18,7 @@ process.env['JWT_ACCESS_SECRET'] = 'segredo-de-teste-para-access-token-0001';
 process.env['JWT_REFRESH_SECRET'] = 'segredo-de-teste-para-refresh-token-002';
 process.env['JWT_ACCESS_TTL_SEGUNDOS'] = '900';
 process.env['JWT_REFRESH_TTL_DIAS'] = '7';
+
+// Chave de criptografia dos dados de pagamento (RNF-04): 32 bytes fixos, sem
+// relacao com qualquer ambiente real.
+process.env['DADOS_PAGAMENTO_CHAVE'] = Buffer.alloc(32, 7).toString('base64');

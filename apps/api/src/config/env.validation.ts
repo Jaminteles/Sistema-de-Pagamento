@@ -71,6 +71,14 @@ export class EnvironmentVariables {
   @Min(1)
   @Max(30)
   JWT_REFRESH_TTL_DIAS = 7;
+
+  /**
+   * Chave da criptografia em repouso da chave Pix e da conta do funcionario
+   * (RNF-04): 32 bytes em base64. Sem padrao: faltando, a aplicacao nao sobe.
+   */
+  @IsString()
+  @IsNotEmpty()
+  DADOS_PAGAMENTO_CHAVE!: string;
 }
 
 /** Usada pelo ConfigModule: falha no boot se o ambiente estiver incompleto. */
@@ -97,6 +105,12 @@ export function validateEnv(config: Record<string, unknown>): EnvironmentVariabl
   // variavel ausente, nao o de segredos iguais.
   if (instance.JWT_ACCESS_SECRET === instance.JWT_REFRESH_SECRET) {
     throw new Error('JWT_ACCESS_SECRET e JWT_REFRESH_SECRET precisam ser diferentes.');
+  }
+
+  // AES-256 exige exatamente 32 bytes. Falhar aqui evita descobrir a chave
+  // errada apenas na primeira gravacao de dado de pagamento.
+  if (Buffer.from(instance.DADOS_PAGAMENTO_CHAVE, 'base64').length !== 32) {
+    throw new Error('DADOS_PAGAMENTO_CHAVE precisa ter 32 bytes em base64.');
   }
 
   return instance;
