@@ -106,6 +106,51 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'funcionarios',
+        title: 'Funcionarios | Ponto e Pagamento',
+        // O encarregado ve somente os funcionarios das obras dele (RN-05) e com
+        // o CPF mascarado (RNF-05); o recorte e feito pela API.
+        data: {
+          [PERFIS_DA_ROTA]: [
+            PerfilUsuario.ADMIN,
+            PerfilUsuario.RH,
+            PerfilUsuario.FINANCEIRO,
+            PerfilUsuario.ENCARREGADO,
+          ],
+        },
+        loadComponent: () =>
+          import('./features/funcionarios/pagina-funcionarios.component').then(
+            (m) => m.PaginaFuncionariosComponent,
+          ),
+      },
+      {
+        path: 'funcionarios/novo',
+        title: 'Novo funcionario | Ponto e Pagamento',
+        data: { [PERFIS_DA_ROTA]: [PerfilUsuario.ADMIN, PerfilUsuario.RH] },
+        loadComponent: () =>
+          import('./features/funcionarios/pagina-funcionario-form.component').then(
+            (m) => m.PaginaFuncionarioFormComponent,
+          ),
+      },
+      {
+        path: 'funcionarios/importacao',
+        title: 'Importar funcionarios | Ponto e Pagamento',
+        data: { [PERFIS_DA_ROTA]: [PerfilUsuario.ADMIN, PerfilUsuario.RH] },
+        loadComponent: () =>
+          import('./features/funcionarios/pagina-importar-funcionarios.component').then(
+            (m) => m.PaginaImportarFuncionariosComponent,
+          ),
+      },
+      {
+        path: 'funcionarios/:id',
+        title: 'Editar funcionario | Ponto e Pagamento',
+        data: { [PERFIS_DA_ROTA]: [PerfilUsuario.ADMIN, PerfilUsuario.RH] },
+        loadComponent: () =>
+          import('./features/funcionarios/pagina-funcionario-form.component').then(
+            (m) => m.PaginaFuncionarioFormComponent,
+          ),
+      },
+      {
         path: 'jornadas',
         title: 'Jornadas | Ponto e Pagamento',
         data: { [PERFIS_DA_ROTA]: [PerfilUsuario.ADMIN, PerfilUsuario.RH] },

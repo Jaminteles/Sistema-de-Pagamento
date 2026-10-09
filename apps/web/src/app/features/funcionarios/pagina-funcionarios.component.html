@@ -1,0 +1,78 @@
+<header class="pagina__cabecalho">
+  <div>
+    <h1 class="pagina__titulo">Funcionarios</h1>
+    <p class="pagina__descricao">
+      @if (podeCadastrar()) {
+        Cadastro, dados de pagamento e vinculo com obra e jornada.
+      } @else {
+        Funcionarios das obras vinculadas a voce.
+      }
+    </p>
+  </div>
+
+  @if (podeCadastrar()) {
+    <div class="pagina__acoes">
+      <button matButton="outlined" type="button" (click)="importar()">
+        <mat-icon aria-hidden="true">upload_file</mat-icon>
+        Importar planilha
+      </button>
+      <button matButton="filled" type="button" (click)="novo()">
+        <mat-icon aria-hidden="true">person_add</mat-icon>
+        Novo funcionario
+      </button>
+    </div>
+  }
+</header>
+
+<form class="filtros" [formGroup]="filtros" (ngSubmit)="aplicarFiltros()" novalidate>
+  <mat-form-field appearance="outline" class="filtros__busca">
+    <mat-label>Buscar por nome, matricula ou CPF</mat-label>
+    <input matInput type="search" formControlName="busca" maxlength="160" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Obra</mat-label>
+    <mat-select formControlName="obraId">
+      <mat-option [value]="null">Todas</mat-option>
+      @for (obra of obras(); track obra.id) {
+        <mat-option [value]="obra.id">{{ obra.nome }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Situacao</mat-label>
+    <mat-select formControlName="situacao">
+      <mat-option [value]="null">Todas</mat-option>
+      @for (situacao of situacoes; track situacao) {
+        <mat-option [value]="situacao">{{ rotuloSituacao[situacao] }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <div class="filtros__acoes">
+    <button matButton="outlined" type="submit">Filtrar</button>
+    <button matButton type="button" (click)="limparFiltros()">Limpar</button>
+  </div>
+</form>
+
+<app-tabela
+  [colunas]="colunas"
+  [dados]="funcionarios()"
+  [carregando]="carregando()"
+  [erro]="erro()"
+  [selecionavel]="podeCadastrar()"
+  mensagemVazio="Nenhum funcionario encontrado com esses filtros."
+  (recarregar)="carregar()"
+  (selecionar)="abrir($event)"
+/>
+
+@if (total() > 0) {
+  <mat-paginator
+    [length]="total()"
+    [pageSize]="tamanho()"
+    [pageIndex]="pagina() - 1"
+    [pageSizeOptions]="[10, 20, 50]"
+    (page)="mudarPagina($event)"
+  />
+}

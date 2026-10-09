@@ -28,6 +28,19 @@ describe('menuDoPerfil', () => {
     }
   });
 
+  it('mostra Funcionarios para todos os perfis com sessao (T-028)', () => {
+    for (const perfil of Object.values(PerfilUsuario)) {
+      expect(rotas(perfil)).toContain('/funcionarios');
+    }
+  });
+
+  it('esconde Jornadas e Feriados do encarregado e do financeiro', () => {
+    for (const perfil of [PerfilUsuario.ENCARREGADO, PerfilUsuario.FINANCEIRO]) {
+      expect(rotas(perfil)).not.toContain('/jornadas');
+      expect(rotas(perfil)).not.toContain('/feriados');
+    }
+  });
+
   it('nao mostra nada sem sessao', () => {
     expect(menuDoPerfil(null)).toEqual([]);
   });

@@ -34,6 +34,14 @@ export const MENU_PRINCIPAL: readonly ItemMenu[] = [
     perfis: ['ADMIN', 'RH', 'ENCARREGADO'],
   },
   {
+    rota: '/funcionarios',
+    rotulo: 'Funcionarios',
+    icone: 'badge',
+    // O encarregado consulta os funcionarios das obras dele (RN-05); o
+    // financeiro precisa deles para os pagamentos.
+    perfis: ['ADMIN', 'RH', 'ENCARREGADO', 'FINANCEIRO'],
+  },
+  {
     rota: '/jornadas',
     rotulo: 'Jornadas',
     icone: 'schedule',

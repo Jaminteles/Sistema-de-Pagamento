@@ -1,0 +1,13 @@
+@use '../../shared/styles/pagina';
+
+.pagina__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (min-width: 60rem) {
+  .filtros {
+    grid-template-columns: 2fr 1fr 1fr auto;
+  }
+}
