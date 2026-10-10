@@ -1,0 +1,116 @@
+<header class="pagina__cabecalho">
+  <div>
+    <h1 class="pagina__titulo">{{ dados()?.funcionarioNome ?? 'Ponto do funcionario' }}</h1>
+    <p class="pagina__descricao">
+      @if (dados()) {
+        Matricula {{ dados()?.matricula }} &middot; {{ rotuloIntervalo() }}
+      } @else {
+        Lancamento por funcionario em visao semanal ou mensal.
+      }
+    </p>
+  </div>
+
+  <button matButton type="button" (click)="voltar()">
+    <mat-icon aria-hidden="true">arrow_back</mat-icon>
+    Grade da equipe
+  </button>
+</header>
+
+<div class="navegacao">
+  <mat-button-toggle-group
+    [value]="visao()"
+    aria-label="Visao do periodo"
+    (change)="trocarVisao($event.value === 'MES' ? 'MES' : 'SEMANA')"
+  >
+    <mat-button-toggle value="SEMANA">Semana</mat-button-toggle>
+    <mat-button-toggle value="MES">Mes</mat-button-toggle>
+  </mat-button-toggle-group>
+
+  <div class="navegacao__setas">
+    <button matIconButton type="button" aria-label="Anterior" (click)="navegar(-1)">
+      <mat-icon aria-hidden="true">chevron_left</mat-icon>
+    </button>
+    <button matButton type="button" (click)="irParaHoje()">Hoje</button>
+    <button matIconButton type="button" aria-label="Proximo" (click)="navegar(1)">
+      <mat-icon aria-hidden="true">chevron_right</mat-icon>
+    </button>
+  </div>
+</div>
+
+<app-estado-conteudo
+  [carregando]="carregando()"
+  [erro]="erro()"
+  mensagemCarregando="Carregando o ponto do funcionario..."
+  (recarregar)="carregar()"
+>
+  @if (dados(); as resumo) {
+    <dl class="totais">
+      <div>
+        <dt>Trabalhadas</dt>
+        <dd>{{ duracao(resumo.totais.minutosTrabalhados) }}</dd>
+      </div>
+      <div>
+        <dt>Extras 50%</dt>
+        <dd>{{ duracao(resumo.totais.minutosExtras50) }}</dd>
+      </div>
+      <div>
+        <dt>Extras 100%</dt>
+        <dd>{{ duracao(resumo.totais.minutosExtras100) }}</dd>
+      </div>
+      <div>
+        <dt>Noturnas</dt>
+        <dd>{{ duracao(resumo.totais.minutosNoturnos) }}</dd>
+      </div>
+      <div>
+        <dt>Atrasos</dt>
+        <dd>{{ duracao(resumo.totais.minutosAtraso) }}</dd>
+      </div>
+      <div>
+        <dt>Faltas</dt>
+        <dd>{{ duracao(resumo.totais.minutosFalta) }}</dd>
+      </div>
+    </dl>
+  }
+
+  <div class="dias">
+    @for (linha of linhasDia(); track linha.data; let i = $index) {
+      <article class="dias__linha" [class.dias__linha--feriado]="linha.feriado">
+        <header class="dias__cabecalho">
+          <span class="dias__data">{{ linha.rotulo }}</span>
+          @if (linha.jornada) {
+            <span class="dias__detalhe">{{ linha.jornada.nome }}</span>
+          } @else {
+            <span class="dias__detalhe">Sem vinculo neste dia</span>
+          }
+          @if (linha.feriado) {
+            <span class="dias__detalhe">Feriado: {{ linha.feriado }}</span>
+          }
+          @if (linha.dia && !linha.dia.editavel) {
+            <span class="dias__detalhe">
+              <mat-icon aria-hidden="true">lock</mat-icon>
+              Fechado para edicao
+            </span>
+          }
+        </header>
+
+        <app-campos-lancamento [grupo]="grupoDa(i)" [erros]="errosDe(linha.data)" />
+
+        @if (linha.dia) {
+          <p class="dias__totais">
+            Trabalhadas {{ duracao(linha.dia.minutosTrabalhados) }} &middot; extras 50%
+            {{ duracao(linha.dia.minutosExtras50) }} &middot; extras 100%
+            {{ duracao(linha.dia.minutosExtras100) }}
+          </p>
+        }
+      </article>
+    }
+  </div>
+
+  <div class="barra-salvar">
+    <span>{{ linhasDia().length }} dia(s) no intervalo</span>
+    <button matButton="filled" type="button" [disabled]="salvando()" (click)="salvar()">
+      <mat-icon aria-hidden="true">save</mat-icon>
+      {{ salvando() ? 'Salvando...' : 'Salvar alteracoes' }}
+    </button>
+  </div>
+</app-estado-conteudo>
