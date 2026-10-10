@@ -50,7 +50,8 @@ export const AbrangenciaFeriado = {
 } as const;
 export type AbrangenciaFeriado = (typeof AbrangenciaFeriado)[keyof typeof AbrangenciaFeriado];
 
-export const ABRANGENCIAS_FERIADO: readonly AbrangenciaFeriado[] = Object.values(AbrangenciaFeriado);
+export const ABRANGENCIAS_FERIADO: readonly AbrangenciaFeriado[] =
+  Object.values(AbrangenciaFeriado);
 
 /** Rotulos para exibicao no front-end. */
 export const ABRANGENCIA_FERIADO_LABEL: Readonly<Record<AbrangenciaFeriado, string>> = {

@@ -3,11 +3,11 @@ import {
   type FuncionarioResponse,
   mascararCpf,
   PerfilUsuario,
-  TIMEZONE_NEGOCIO,
   type VinculoFuncionarioResponse,
 } from '@sistema/shared';
 import type { UsuarioRequisicao } from '../auth/tipos';
-import { dataIsoParaDate, dateParaDataIso } from '../common/data/data-iso';
+import { dateParaDataIso } from '../common/data/data-iso';
+import { hojeNoFusoDeNegocio } from '../common/data/fuso-negocio';
 import type { FuncionarioRegistro, VinculoRegistro } from './funcionarios.repository';
 
 /**
@@ -29,21 +29,13 @@ export function podeVerDadoCompleto(usuario: UsuarioRequisicao): boolean {
 }
 
 /**
- * Dia de hoje no fuso de negocio America/Bahia (RNF-12), como `Date` em UTC
- * para comparar com colunas `date`.
+ * Dia de hoje no fuso de negocio America/Bahia (RNF-12).
  *
- * Usar o fuso do servidor erraria o dia por algumas horas e faria um vinculo
- * que comeca hoje parecer futuro (ou ao contrario) perto da virada.
+ * Reexportado do helper comum para os imports existentes deste modulo
+ * continuarem valendo; a conversao de fuso vive em common/data/fuso-negocio,
+ * que o modulo de ponto tambem usa.
  */
-export function hojeNoFusoDeNegocio(agora: Date = new Date()): Date {
-  const formatador = new Intl.DateTimeFormat('en-CA', {
-    timeZone: TIMEZONE_NEGOCIO,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-  return dataIsoParaDate(formatador.format(agora));
-}
+export { hojeNoFusoDeNegocio };
 
 export function paraVinculoResponse(registro: VinculoRegistro): VinculoFuncionarioResponse {
   return {

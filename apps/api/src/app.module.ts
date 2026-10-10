@@ -13,6 +13,7 @@ import { FuncionariosModule } from './funcionarios/funcionarios.module';
 import { HealthModule } from './health/health.module';
 import { JornadasModule } from './jornadas/jornadas.module';
 import { ObrasModule } from './obras/obras.module';
+import { PontoModule } from './ponto/ponto.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
 
 /**
@@ -38,6 +39,7 @@ import { UsuariosModule } from './usuarios/usuarios.module';
     JornadasModule,
     FeriadosModule,
     FuncionariosModule,
+    PontoModule,
     HealthModule,
   ],
   providers: [

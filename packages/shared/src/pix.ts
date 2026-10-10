@@ -17,7 +17,8 @@ export const CONTA_TAMANHO_MAXIMO = 20;
 
 const PADRAO_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 /** Chave aleatoria (EVP): UUID v4 em minusculas ou maiusculas. */
-const PADRAO_ALEATORIA = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+const PADRAO_ALEATORIA =
+  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
 /** CNPJ com digitos verificadores validos. */
 export function cnpjValido(valor: string): boolean {

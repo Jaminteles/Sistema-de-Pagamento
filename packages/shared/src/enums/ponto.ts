@@ -54,3 +54,49 @@ export const OrigemMarcacao = {
   AJUSTE: 'AJUSTE',
 } as const;
 export type OrigemMarcacao = (typeof OrigemMarcacao)[keyof typeof OrigemMarcacao];
+
+export const OCORRENCIAS_DIA: readonly OcorrenciaDia[] = Object.values(OcorrenciaDia);
+
+/** Rotulos para exibicao no front-end. */
+export const OCORRENCIA_DIA_LABEL: Readonly<Record<OcorrenciaDia, string>> = {
+  NORMAL: 'Normal',
+  FALTA: 'Falta',
+  FALTA_JUSTIFICADA: 'Falta justificada',
+  ATESTADO: 'Atestado',
+  FOLGA: 'Folga',
+  FERIAS: 'Ferias',
+  AFASTAMENTO: 'Afastamento',
+};
+
+/**
+ * Somente o dia NORMAL tem marcacao de ponto (RF-015).
+ *
+ * Nas demais ocorrencias a pessoa nao trabalhou: registrar horario junto de
+ * falta, folga ou ferias seria contradicao, e a apuracao (RF-020) usaria os dois
+ * ao mesmo tempo. Trocar a ocorrencia de um dia ja lancado apaga as marcacoes.
+ */
+export function aceitaMarcacao(ocorrencia: OcorrenciaDia): boolean {
+  return ocorrencia === OcorrenciaDia.NORMAL;
+}
+
+export const STATUS_PERIODO_LABEL: Readonly<Record<StatusPeriodo, string>> = {
+  ABERTO: 'Aberto',
+  EM_CONFERENCIA: 'Em conferencia',
+  FECHADO: 'Fechado',
+};
+
+export const STATUS_ENVIO_DIA_LABEL: Readonly<Record<StatusEnvioDia, string>> = {
+  NAO_ENVIADO: 'Nao enviado',
+  ENVIADO_RH: 'Enviado ao RH',
+  CONFERIDO: 'Conferido',
+};
+
+export const TIPO_MARCACAO_LABEL: Readonly<Record<TipoMarcacao, string>> = {
+  ENTRADA: 'Entrada',
+  SAIDA_INTERVALO: 'Saida do intervalo',
+  RETORNO_INTERVALO: 'Retorno do intervalo',
+  SAIDA: 'Saida',
+};
+
+export const STATUS_PERIODO: readonly StatusPeriodo[] = Object.values(StatusPeriodo);
+export const TIPOS_MARCACAO: readonly TipoMarcacao[] = Object.values(TipoMarcacao);
