@@ -1,0 +1,49 @@
+// Ocorrencia + horarios de um dia. Mobile-first: no celular os quatro campos
+// ficam em duas colunas; a partir de 48rem cabem os quatro na mesma linha.
+
+.lancamento {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.lancamento__horas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(5.5rem, 1fr));
+  gap: 0.5rem;
+}
+
+.lancamento__aviso {
+  margin: 0;
+  font-size: 0.75rem;
+  opacity: 0.75;
+}
+
+.lancamento__erros {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--mat-sys-error, #b3261e);
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  mat-icon {
+    font-size: 1rem;
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+@media (min-width: 48rem) {
+  .lancamento__horas {
+    grid-template-columns: repeat(4, minmax(5.5rem, 1fr));
+  }
+}
