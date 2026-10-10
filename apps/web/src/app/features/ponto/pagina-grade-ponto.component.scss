@@ -1,0 +1,104 @@
+@use '../../shared/styles/pagina';
+
+// Grade de lancamento: mobile-first. No celular cada funcionario e um cartao;
+// a partir de 60rem o nome fica a esquerda e os campos a direita, no formato de
+// grade de verdade.
+
+.periodo {
+  margin: 0;
+  font-size: 0.875rem;
+  opacity: 0.75;
+}
+
+.filtros__acoes {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, currentColor 6%, transparent);
+  font-size: 0.875rem;
+
+  p {
+    margin: 0 0 0.5rem;
+  }
+
+  p:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.aviso--bloqueio {
+  align-items: center;
+}
+
+.aviso__detalhe {
+  opacity: 0.75;
+}
+
+.acoes-rapidas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.grade {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.grade__linha {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+  border-radius: 0.5rem;
+}
+
+.grade__pessoa {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.grade__nome {
+  padding: 0;
+  font-weight: 600;
+}
+
+.grade__detalhe {
+  font-size: 0.75rem;
+  opacity: 0.75;
+}
+
+.barra-salvar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 0.75rem 0;
+  background: var(--mat-sys-surface, #fff);
+  font-size: 0.875rem;
+}
+
+@media (min-width: 60rem) {
+  .grade__linha {
+    display: grid;
+    grid-template-columns: 14rem 1fr;
+    align-items: start;
+    gap: 1rem;
+  }
+}

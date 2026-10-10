@@ -42,6 +42,14 @@ export const MENU_PRINCIPAL: readonly ItemMenu[] = [
     perfis: ['ADMIN', 'RH', 'ENCARREGADO', 'FINANCEIRO'],
   },
   {
+    rota: '/ponto',
+    rotulo: 'Lancamento de ponto',
+    icone: 'how_to_reg',
+    // O encarregado lanca o ponto da equipe dele (RN-05). O financeiro nao
+    // lanca nem confere ponto.
+    perfis: ['ADMIN', 'RH', 'ENCARREGADO'],
+  },
+  {
     rota: '/jornadas',
     rotulo: 'Jornadas',
     icone: 'schedule',

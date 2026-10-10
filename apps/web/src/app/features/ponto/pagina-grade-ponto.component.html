@@ -1,0 +1,136 @@
+<header class="pagina__cabecalho">
+  <div>
+    <h1 class="pagina__titulo">Lancamento de ponto</h1>
+    <p class="pagina__descricao">Equipe da obra no dia, com ocorrencia e horarios.</p>
+  </div>
+
+  @if (grade()?.periodo; as periodo) {
+    <p class="periodo">
+      Competencia {{ periodo.competencia }} &middot; {{ rotuloStatus[periodo.status] }}
+    </p>
+  }
+</header>
+
+<form class="filtros" [formGroup]="filtros" (ngSubmit)="carregar()" novalidate>
+  <mat-form-field appearance="outline">
+    <mat-label>Obra</mat-label>
+    <mat-select formControlName="obraId" (selectionChange)="carregar()">
+      @for (obra of obras(); track obra.id) {
+        <mat-option [value]="obra.id">{{ obra.nome }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Dia</mat-label>
+    <input matInput type="date" formControlName="data" (change)="carregar()" />
+  </mat-form-field>
+
+  <div class="filtros__acoes">
+    <button matIconButton type="button" aria-label="Dia anterior" (click)="mudarData(-1)">
+      <mat-icon aria-hidden="true">chevron_left</mat-icon>
+    </button>
+    <button matIconButton type="button" aria-label="Dia seguinte" (click)="mudarData(1)">
+      <mat-icon aria-hidden="true">chevron_right</mat-icon>
+    </button>
+  </div>
+</form>
+
+<app-estado-conteudo
+  [carregando]="carregando()"
+  [erro]="erro()"
+  [vazio]="totalLinhas() === 0 && !semPeriodo()"
+  mensagemCarregando="Carregando a equipe do dia..."
+  mensagemVazio="Nenhum funcionario com vinculo nesta obra neste dia."
+  (recarregar)="carregar()"
+>
+  @if (semPeriodo()) {
+    <div class="aviso" role="status">
+      <mat-icon aria-hidden="true">event_busy</mat-icon>
+      <div>
+        <p>Nao existe periodo de apuracao para {{ rotuloDoDia() }}.</p>
+        @if (podeAbrirPeriodo()) {
+          <button matButton="filled" type="button" (click)="abrirPeriodo()">
+            Abrir periodo da competencia
+          </button>
+        } @else {
+          <p class="aviso__detalhe">Procure o RH para abrir a competencia.</p>
+        }
+      </div>
+    </div>
+  } @else {
+    @if (!grade()?.editavel) {
+      <p class="aviso aviso--bloqueio" role="status">
+        <mat-icon aria-hidden="true">lock</mat-icon>
+        Este dia nao aceita mais alteracao do seu perfil.
+      </p>
+    }
+
+    @if (grade()?.feriado) {
+      <p class="aviso" role="status">
+        <mat-icon aria-hidden="true">event</mat-icon>
+        Feriado: {{ grade()?.feriado }}
+      </p>
+    }
+
+    <div class="acoes-rapidas">
+      <button
+        matButton="outlined"
+        type="button"
+        [disabled]="!grade()?.editavel"
+        (click)="aplicarJornada()"
+      >
+        <mat-icon aria-hidden="true">schedule</mat-icon>
+        Horario da jornada
+      </button>
+      <button
+        matButton="outlined"
+        type="button"
+        [disabled]="!grade()?.editavel"
+        (click)="replicarPrimeira()"
+      >
+        <mat-icon aria-hidden="true">content_copy</mat-icon>
+        Replicar a primeira linha
+      </button>
+    </div>
+
+    <div class="grade" #area>
+      @for (linha of grade()?.linhas ?? []; track linha.funcionarioId; let i = $index) {
+        <article class="grade__linha">
+          <header class="grade__pessoa">
+            <button
+              matButton
+              type="button"
+              class="grade__nome"
+              (click)="abrirFuncionario(linha.funcionarioId)"
+            >
+              {{ linha.funcionarioNome }}
+            </button>
+            <span class="grade__detalhe">
+              Mat. {{ linha.matricula }} &middot; {{ linha.jornada.nome }}
+            </span>
+          </header>
+
+          <app-campos-lancamento
+            [grupo]="grupoDa(i)"
+            [erros]="errosDe(linha.funcionarioId)"
+            (enterNoCampo)="avancar($event)"
+          />
+        </article>
+      }
+    </div>
+
+    <div class="barra-salvar">
+      <span>{{ totalLinhas() }} funcionario(s)</span>
+      <button
+        matButton="filled"
+        type="button"
+        [disabled]="salvando() || !grade()?.editavel"
+        (click)="salvar()"
+      >
+        <mat-icon aria-hidden="true">save</mat-icon>
+        {{ salvando() ? 'Salvando...' : 'Salvar o dia' }}
+      </button>
+    </div>
+  }
+</app-estado-conteudo>

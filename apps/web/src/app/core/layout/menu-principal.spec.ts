@@ -41,6 +41,13 @@ describe('menuDoPerfil', () => {
     }
   });
 
+  it('mostra Lancamento de ponto para quem lanca ponto (T-036)', () => {
+    for (const perfil of [PerfilUsuario.ADMIN, PerfilUsuario.RH, PerfilUsuario.ENCARREGADO]) {
+      expect(rotas(perfil)).toContain('/ponto');
+    }
+    expect(rotas(PerfilUsuario.FINANCEIRO)).not.toContain('/ponto');
+  });
+
   it('nao mostra nada sem sessao', () => {
     expect(menuDoPerfil(null)).toEqual([]);
   });

@@ -78,11 +78,7 @@ export const routes: Routes = [
         // O encarregado ve somente as obras vinculadas a ele (RN-05); o recorte
         // e feito pela API, a partir do usuario autenticado.
         data: {
-          [PERFIS_DA_ROTA]: [
-            PerfilUsuario.ADMIN,
-            PerfilUsuario.RH,
-            PerfilUsuario.ENCARREGADO,
-          ],
+          [PERFIS_DA_ROTA]: [PerfilUsuario.ADMIN, PerfilUsuario.RH, PerfilUsuario.ENCARREGADO],
         },
         loadComponent: () =>
           import('./features/obras/pagina-obras.component').then((m) => m.PaginaObrasComponent),
@@ -148,6 +144,30 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/funcionarios/pagina-funcionario-form.component').then(
             (m) => m.PaginaFuncionarioFormComponent,
+          ),
+      },
+      {
+        path: 'ponto',
+        title: 'Lancamento de ponto | Ponto e Pagamento',
+        // O encarregado lanca somente a equipe das obras dele (RN-05); o
+        // recorte e feito pela API, a partir do usuario autenticado.
+        data: {
+          [PERFIS_DA_ROTA]: [PerfilUsuario.ADMIN, PerfilUsuario.RH, PerfilUsuario.ENCARREGADO],
+        },
+        loadComponent: () =>
+          import('./features/ponto/pagina-grade-ponto.component').then(
+            (m) => m.PaginaGradePontoComponent,
+          ),
+      },
+      {
+        path: 'ponto/funcionarios/:id',
+        title: 'Ponto do funcionario | Ponto e Pagamento',
+        data: {
+          [PERFIS_DA_ROTA]: [PerfilUsuario.ADMIN, PerfilUsuario.RH, PerfilUsuario.ENCARREGADO],
+        },
+        loadComponent: () =>
+          import('./features/ponto/pagina-ponto-funcionario.component').then(
+            (m) => m.PaginaPontoFuncionarioComponent,
           ),
       },
       {
