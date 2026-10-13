@@ -1,6 +1,8 @@
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import {
+  type EnviarPeriodoRhResponse,
   type GradeEquipeResponse,
   type LancarEquipeRequest,
   type LancarPontoResponse,
@@ -18,6 +20,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { NotificacaoService } from '../../core/notificacao/notificacao.service';
 import { ConfirmacaoService } from '../../shared/components/modal-confirmacao/confirmacao.service';
 import { ObrasService } from '../obras/obras.service';
+import type { DadosEnvioRh } from './modal-envio-rh.component';
 import { PaginaGradePontoComponent } from './pagina-grade-ponto.component';
 import { PontoService } from './ponto.service';
 
@@ -113,6 +116,8 @@ describe('PaginaGradePontoComponent (T-036)', () => {
   let resposta: LancarPontoResponse;
   let gradeAtual: GradeEquipeResponse;
   let avisos: string[];
+  let modaisAbertos: DadosEnvioRh[];
+  let respostaEnvio: EnviarPeriodoRhResponse | undefined;
 
   async function montar(perfil: PerfilUsuario = PerfilUsuario.ENCARREGADO): Promise<void> {
     enviados = [];
@@ -162,6 +167,15 @@ describe('PaginaGradePontoComponent (T-036)', () => {
         },
         { provide: ConfirmacaoService, useValue: { confirmar: () => Promise.resolve(true) } },
         { provide: Router, useValue: { navigate: () => Promise.resolve(true) } },
+        {
+          provide: MatDialog,
+          useValue: {
+            open: (_componente: unknown, config: { data: DadosEnvioRh }) => {
+              modaisAbertos.push(config.data);
+              return { afterClosed: () => of(respostaEnvio) };
+            },
+          },
+        },
       ],
     }).compileComponents();
 
@@ -172,6 +186,13 @@ describe('PaginaGradePontoComponent (T-036)', () => {
 
   beforeEach(() => {
     gradeAtual = grade();
+    modaisAbertos = [];
+    respostaEnvio = {
+      periodo: PERIODO,
+      diasEnviados: 30,
+      funcionarios: 2,
+      totalPendencias: 1,
+    };
   });
 
   it('seleciona a primeira obra e carrega a grade do dia', async () => {
@@ -337,5 +358,60 @@ describe('PaginaGradePontoComponent (T-036)', () => {
     await montar();
 
     expect(componente.grupoDa(0).getRawValue().entrada).toBe('07:05');
+  });
+
+  describe('envio ao RH (T-046 / RF-018)', () => {
+    it('oferece o envio quando existe periodo na data', async () => {
+      await montar();
+
+      const botoes = [...(fixture.nativeElement as HTMLElement).querySelectorAll('button')];
+      expect(botoes.some((botao) => (botao.textContent ?? '').includes('Enviar ao RH'))).toBe(true);
+    });
+
+    it('abre o modal com o periodo e a obra da grade', async () => {
+      await montar();
+
+      componente.enviarAoRh();
+      await fixture.whenStable();
+
+      expect(modaisAbertos).toHaveLength(1);
+      expect(modaisAbertos[0]).toEqual({
+        periodoId: 'p-1',
+        competencia: '2026-12',
+        obraId: 'o-1',
+        obraNome: 'Obra Centro',
+      });
+    });
+
+    it('avisa e recarrega a grade depois do envio', async () => {
+      await montar();
+
+      componente.enviarAoRh();
+      await fixture.whenStable();
+
+      expect(avisos.some((aviso) => aviso.includes('30 dia(s)'))).toBe(true);
+    });
+
+    it('nao avisa nada quando o usuario cancela o modal', async () => {
+      respostaEnvio = undefined;
+
+      await montar();
+
+      componente.enviarAoRh();
+      await fixture.whenStable();
+
+      expect(avisos).toEqual([]);
+    });
+
+    it('nao abre o modal sem periodo de apuracao na data', async () => {
+      gradeAtual = grade({ periodo: null, editavel: false });
+
+      await montar();
+
+      componente.enviarAoRh();
+      await fixture.whenStable();
+
+      expect(modaisAbertos).toEqual([]);
+    });
   });
 });

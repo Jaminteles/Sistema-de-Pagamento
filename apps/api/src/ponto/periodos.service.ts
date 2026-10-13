@@ -1,10 +1,12 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import {
+  type ApurarPeriodoResponse,
   type GerarDiasResponse,
   PAGINACAO_TAMANHO_PADRAO,
   type PeriodoResponse,
   type RespostaPaginada,
 } from '@sistema/shared';
+import { ApuracaoService } from '../apuracao/apuracao.service';
 import { datasDoIntervalo, intervaloDaCompetencia } from '../common/data/data-iso';
 import type { AbrirPeriodoDto } from './dto/abrir-periodo.dto';
 import type { ListarPeriodosQuery } from './dto/listar-periodos.query';
@@ -39,7 +41,10 @@ function menorData(datas: readonly Date[]): Date {
  */
 @Injectable()
 export class PeriodosService {
-  constructor(private readonly repositorio: PontoRepository) {}
+  constructor(
+    private readonly repositorio: PontoRepository,
+    private readonly apuracao: ApuracaoService,
+  ) {}
 
   async listar(query: ListarPeriodosQuery): Promise<RespostaPaginada<PeriodoResponse>> {
     const pagina = query.pagina ?? 1;
@@ -56,6 +61,17 @@ export class PeriodosService {
 
   async buscar(id: string): Promise<PeriodoResponse> {
     return paraPeriodoResponse(await this.exigirPeriodo(id));
+  }
+
+  /**
+   * Recalcula os totais do periodo (RF-020).
+   *
+   * Existe para quando muda algo de fora do dia - feriado cadastrado depois,
+   * jornada corrigida, vinculo acertado -, ja que o dia e apurado a cada
+   * gravacao de ponto.
+   */
+  async apurar(id: string): Promise<ApurarPeriodoResponse> {
+    return this.apuracao.apurarPeriodo(await this.exigirPeriodo(id));
   }
 
   /**

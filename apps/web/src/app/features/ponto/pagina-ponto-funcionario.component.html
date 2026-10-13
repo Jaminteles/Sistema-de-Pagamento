@@ -44,6 +44,7 @@
   (recarregar)="carregar()"
 >
   @if (dados(); as resumo) {
+    <h2 class="totais__titulo">Totais do periodo exibido</h2>
     <dl class="totais">
       <div>
         <dt>Trabalhadas</dt>
@@ -91,15 +92,55 @@
               Fechado para edicao
             </span>
           }
+          @if (linha.dia?.editavel) {
+            <button
+              matButton
+              type="button"
+              class="dias__ajustar"
+              (click)="ajustar(linha)"
+              [attr.aria-label]="'Ajustar o ponto de ' + linha.rotulo"
+            >
+              <mat-icon aria-hidden="true">edit_note</mat-icon>
+              Ajustar
+            </button>
+          }
         </header>
 
         <app-campos-lancamento [grupo]="grupoDa(i)" [erros]="errosDe(linha.data)" />
 
-        @if (linha.dia) {
-          <p class="dias__totais">
-            Trabalhadas {{ duracao(linha.dia.minutosTrabalhados) }} &middot; extras 50%
-            {{ duracao(linha.dia.minutosExtras50) }} &middot; extras 100%
-            {{ duracao(linha.dia.minutosExtras100) }}
+        @if (linha.dia; as dia) {
+          <dl class="dias__totais">
+            <div>
+              <dt>Trabalhadas</dt>
+              <dd>{{ duracao(dia.minutosTrabalhados) }}</dd>
+            </div>
+            <div>
+              <dt>Extras 50%</dt>
+              <dd>{{ duracao(dia.minutosExtras50) }}</dd>
+            </div>
+            <div>
+              <dt>Extras 100%</dt>
+              <dd>{{ duracao(dia.minutosExtras100) }}</dd>
+            </div>
+            <div>
+              <dt>Noturnas</dt>
+              <dd>{{ duracao(dia.minutosNoturnos) }}</dd>
+            </div>
+            <div>
+              <dt>Atraso</dt>
+              <dd>{{ duracao(dia.minutosAtraso) }}</dd>
+            </div>
+            <div>
+              <dt>Falta</dt>
+              <dd>{{ duracao(dia.minutosFalta) }}</dd>
+            </div>
+          </dl>
+          <p class="dias__apuracao">
+            @if (dia.apuradoEm) {
+              Apurado em {{ momento(dia.apuradoEm) }}
+            } @else {
+              Ainda nao apurado.
+            }
           </p>
         }
       </article>

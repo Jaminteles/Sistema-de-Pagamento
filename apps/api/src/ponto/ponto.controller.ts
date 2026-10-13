@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -6,12 +7,21 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
+  Post,
   Put,
   Query,
+  Req,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiBody,
+  type ApiBodyOptions,
+  ApiConflictResponse,
+  ApiConsumes,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -19,20 +29,58 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import {
+  AcaoAuditoria,
+  type AjustarDiaResponse,
+  type AjustePontoResponse,
   type GradeEquipeResponse,
+  IMPORTACAO_MARCACOES_EXTENSOES,
+  IMPORTACAO_MARCACOES_TAMANHO_MAXIMO_BYTES,
+  type ImportarMarcacoesResponse,
   type LancarPontoResponse,
   PerfilUsuario,
   type PontoFuncionarioResponse,
 } from '@sistema/shared';
+import type { Request } from 'express';
 import { Perfis } from '../auth/decorators/perfis.decorator';
 import { UsuarioAtual } from '../auth/decorators/usuario-atual.decorator';
 import type { UsuarioRequisicao } from '../auth/tipos';
+import { Auditar } from '../common/auditoria/auditoria.decorator';
+import { coletorDe } from '../common/auditoria/coletor-auditoria';
+import type { ArquivoEnviado } from '../funcionarios/importacao/arquivo-enviado';
+import { AjusteService } from './ajuste.service';
+import { AjustarDiaDto } from './dto/ajustar-dia.dto';
 import { GradeQuery } from './dto/grade.query';
 import { IntervaloQuery } from './dto/intervalo.query';
 import { LancarEquipeDto } from './dto/lancar-equipe.dto';
 import { LancarFuncionarioDto } from './dto/lancar-funcionario.dto';
+import { ImportacaoMarcacoesService } from './importacao-marcacoes.service';
 import { PontoService } from './ponto.service';
+
+/** Rate limit da importacao: arquivo grande e operacao cara, nao de repeticao. */
+const LIMITE_IMPORTACAO = { default: { limit: 10, ttl: 60_000 } };
+
+/** Multer em memoria, com teto de tamanho aplicado antes de o arquivo chegar ao service. */
+const OPCOES_UPLOAD = {
+  limits: { fileSize: IMPORTACAO_MARCACOES_TAMANHO_MAXIMO_BYTES, files: 1 },
+};
+
+const CORPO_UPLOAD: ApiBodyOptions = {
+  schema: {
+    type: 'object',
+    required: ['arquivo'],
+    properties: {
+      arquivo: {
+        type: 'string',
+        format: 'binary',
+        description:
+          `Arquivo ${IMPORTACAO_MARCACOES_EXTENSOES.join(' ou ')} com uma linha por dia: ` +
+          'matricula (ou cpf), data, entrada, saida_intervalo, retorno_intervalo, saida',
+      },
+    },
+  },
+};
 
 /**
  * Lancamento de ponto (T-032 a T-035 / RF-013 a RF-016).
@@ -51,7 +99,11 @@ import { PontoService } from './ponto.service';
 @ApiForbiddenResponse({ description: 'Perfil sem permissao' })
 @Controller('ponto')
 export class PontoController {
-  constructor(private readonly ponto: PontoService) {}
+  constructor(
+    private readonly ponto: PontoService,
+    private readonly ajuste: AjusteService,
+    private readonly importacao: ImportacaoMarcacoesService,
+  ) {}
 
   @Get('grade')
   @Perfis(PerfilUsuario.ADMIN, PerfilUsuario.RH, PerfilUsuario.ENCARREGADO)
@@ -131,5 +183,87 @@ export class PontoController {
     @UsuarioAtual() usuario: UsuarioRequisicao,
   ): Promise<LancarPontoResponse> {
     return this.ponto.lancarFuncionario(funcionarioId, dto, usuario);
+  }
+
+  // -------------------------------------------------------------------------
+  // T-040 / RF-017 - ajuste com justificativa e historico
+  // -------------------------------------------------------------------------
+
+  @Put('dias/:diaPontoId/ajuste')
+  @HttpCode(HttpStatus.OK)
+  @Perfis(PerfilUsuario.ADMIN, PerfilUsuario.RH, PerfilUsuario.ENCARREGADO)
+  @Auditar({
+    acao: AcaoAuditoria.PONTO_AJUSTADO,
+    entidade: 'dia_ponto',
+    parametroId: 'diaPontoId',
+  })
+  @ApiOperation({
+    summary: 'Ajusta um dia ja lancado, com justificativa (RF-017)',
+    description:
+      'Grava a correcao e registra no historico o que mudou, campo a campo, com a ' +
+      'justificativa e o autor. Ao contrario do lancamento em lote, aqui ou o dia inteiro ' +
+      'e aceito ou a chamada falha. O encarregado so ajusta antes do envio ao RH (RN-06) e ' +
+      'apenas na equipe dele (RN-05); periodo fechado nao aceita ajuste (RN-07). Acao ' +
+      'auditada (RF-005).',
+  })
+  @ApiOkResponse({ description: 'Dia ajustado, reapurado, com a linha do tempo' })
+  @ApiBadRequestResponse({ description: 'Justificativa ausente, marcacao invalida ou nada mudou' })
+  @ApiConflictResponse({ description: 'Periodo fechado ou ja enviado ao RH' })
+  @ApiNotFoundResponse({ description: 'Dia nao encontrado ou fora do escopo' })
+  ajustar(
+    @Param('diaPontoId', ParseUUIDPipe) diaPontoId: string,
+    @Body() dto: AjustarDiaDto,
+    @UsuarioAtual() usuario: UsuarioRequisicao,
+    @Req() requisicao: Request,
+  ): Promise<AjustarDiaResponse> {
+    return this.ajuste.ajustar(diaPontoId, dto, usuario, coletorDe(requisicao));
+  }
+
+  @Get('dias/:diaPontoId/ajustes')
+  @Perfis(PerfilUsuario.ADMIN, PerfilUsuario.RH, PerfilUsuario.ENCARREGADO)
+  @ApiOperation({
+    summary: 'Historico de ajustes de um dia (RF-017)',
+    description: 'Do ajuste mais recente para o mais antigo, com autor e justificativa.',
+  })
+  @ApiOkResponse({ description: 'Linha do tempo do dia' })
+  @ApiNotFoundResponse({ description: 'Dia nao encontrado ou fora do escopo' })
+  historicoDeAjustes(
+    @Param('diaPontoId', ParseUUIDPipe) diaPontoId: string,
+    @UsuarioAtual() usuario: UsuarioRequisicao,
+  ): Promise<AjustePontoResponse[]> {
+    return this.ajuste.historico(diaPontoId, usuario);
+  }
+
+  // -------------------------------------------------------------------------
+  // T-042 / RF-019 - importacao de marcacoes por CSV
+  // -------------------------------------------------------------------------
+
+  @Post('marcacoes/importacao')
+  @HttpCode(HttpStatus.OK)
+  @Perfis(PerfilUsuario.ADMIN, PerfilUsuario.RH)
+  @Throttle(LIMITE_IMPORTACAO)
+  @UseInterceptors(FileInterceptor('arquivo', OPCOES_UPLOAD))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody(CORPO_UPLOAD)
+  @ApiOperation({
+    summary: 'Importa marcacoes por CSV (RF-019)',
+    description:
+      'Uma linha por dia de cada funcionario, identificado por matricula ou CPF. As ' +
+      'marcacoes passam pelas mesmas regras do lancamento manual - periodo aberto, vinculo ' +
+      'na data, ocorrencia e validacao de horario - e ficam gravadas com origem IMPORTADO. ' +
+      'Linha com erro nao e gravada e volta no relatorio com linha, campo e motivo.',
+  })
+  @ApiOkResponse({ description: 'Relatorio da importacao' })
+  @ApiBadRequestResponse({
+    description: 'Arquivo ausente, acima do limite ou com cabecalho invalido',
+  })
+  importarMarcacoes(
+    @UploadedFile() arquivo: ArquivoEnviado | undefined,
+    @UsuarioAtual() usuario: UsuarioRequisicao,
+  ): Promise<ImportarMarcacoesResponse> {
+    if (!arquivo) {
+      throw new BadRequestException('Envie o arquivo no campo "arquivo".');
+    }
+    return this.importacao.importar(arquivo, usuario);
   }
 }

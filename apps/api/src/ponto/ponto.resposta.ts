@@ -1,4 +1,6 @@
 import {
+  type AjustePontoResponse,
+  campoEhMarcacao,
   type DiaPontoResponse,
   type JornadaResumoResponse,
   type MarcacaoResponse,
@@ -13,6 +15,7 @@ import type { UsuarioRequisicao } from '../auth/tipos';
 import { dateParaDataIso, diasEntre } from '../common/data/data-iso';
 import { instanteParaHoraLocal } from '../common/data/fuso-negocio';
 import type {
+  AjusteRegistro,
   DiaPontoRegistro,
   JornadaResumo,
   MarcacaoRegistro,
@@ -157,8 +160,31 @@ export function paraDiaResponse(registro: DiaPontoRegistro, editavel: boolean): 
   };
 }
 
+/**
+ * Um registro do historico de ajustes (RF-017).
+ *
+ * Horario sai em "HH:MM" no fuso de negocio, igual ao que a tela mostra; troca
+ * de ocorrencia e de observacao sai como texto.
+ */
+export function paraAjusteResponse(registro: AjusteRegistro): AjustePontoResponse {
+  const hora = (valor: Date | null): string | null =>
+    valor === null ? null : minutosParaHora(instanteParaHoraLocal(valor).minutos);
+
+  return {
+    id: registro.id,
+    campo: registro.campo,
+    valorAnterior: campoEhMarcacao(registro.campo)
+      ? hora(registro.valorAnterior)
+      : registro.textoAnterior,
+    valorNovo: campoEhMarcacao(registro.campo) ? hora(registro.valorNovo) : registro.textoNovo,
+    justificativa: registro.justificativa,
+    usuarioNome: registro.usuarioNome,
+    criadoEm: registro.criadoEm.toISOString(),
+  };
+}
+
 /** Soma dos totais ja calculados pelo motor de apuracao. Minutos inteiros. */
-export function somarTotais(dias: readonly DiaPontoResponse[]): TotaisPontoResponse {
+export function somarTotais(dias: readonly TotaisPontoResponse[]): TotaisPontoResponse {
   return dias.reduce<TotaisPontoResponse>(
     (total, dia) => ({
       minutosTrabalhados: total.minutosTrabalhados + dia.minutosTrabalhados,

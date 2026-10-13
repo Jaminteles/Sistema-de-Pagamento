@@ -138,7 +138,10 @@ interface FuncionarioBruto {
   criadoEm: Date;
   atualizadoEm: Date;
   vinculos: VinculoBruto[];
-  dadosPagamento: { chavePixCriptografada: string | null; contaCriptografada: string | null } | null;
+  dadosPagamento: {
+    chavePixCriptografada: string | null;
+    contaCriptografada: string | null;
+  } | null;
 }
 
 function paraVinculo(bruto: VinculoBruto): VinculoRegistro {
@@ -449,6 +452,32 @@ export class FuncionariosRepository {
       cpfs: new Set(achados.map((item) => item.cpf)),
       matriculas: new Set(achados.map((item) => item.matricula)),
     };
+  }
+
+  /**
+   * Resolve funcionarios por matricula ou CPF, numa consulta so.
+   *
+   * Usado pela importacao de marcacoes (RF-019), em que o arquivo identifica a
+   * pessoa por um dos dois. CPF entra somente como criterio de busca: a
+   * resposta da importacao nao devolve CPF (RNF-05).
+   */
+  async identificar(
+    cpfs: readonly string[],
+    matriculas: readonly string[],
+  ): Promise<{ id: string; nome: string; cpf: string; matricula: string }[]> {
+    if (cpfs.length === 0 && matriculas.length === 0) {
+      return [];
+    }
+
+    return this.prisma.funcionario.findMany({
+      where: {
+        OR: [
+          ...(cpfs.length > 0 ? [{ cpf: { in: [...cpfs] } }] : []),
+          ...(matriculas.length > 0 ? [{ matricula: { in: [...matriculas] } }] : []),
+        ],
+      },
+      select: { id: true, nome: true, cpf: true, matricula: true },
+    });
   }
 
   /**

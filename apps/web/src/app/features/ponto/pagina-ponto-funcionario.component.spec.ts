@@ -253,4 +253,52 @@ describe('PaginaPontoFuncionarioComponent (T-037)', () => {
 
     expect(componente.duracao(componente.dados()?.totais.minutosTrabalhados ?? 0)).toBe('8h');
   });
+
+  describe('totais e ajuste (T-047 e T-045)', () => {
+    it('mostra os seis totais do dia e os do periodo (RF-020)', async () => {
+      atual = resposta({
+        dias: [
+          dia({
+            data: '2026-12-07',
+            minutosTrabalhados: 600,
+            minutosExtras50: 60,
+            minutosNoturnos: 30,
+            minutosAtraso: 15,
+            minutosFalta: 0,
+            apuradoEm: '2026-12-07T21:00:00.000Z',
+          }),
+        ],
+      });
+
+      await montar();
+
+      const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
+      expect(texto).toContain('Totais do periodo exibido');
+      expect(texto).toContain('Noturnas');
+      expect(texto).toContain('Atraso');
+      expect(texto).toContain('Falta');
+      expect(texto).toContain('10h');
+      expect(texto).toContain('Apurado em');
+    });
+
+    it('avisa quando o dia ainda nao foi apurado', async () => {
+      await montar();
+
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain('Ainda nao apurado');
+    });
+
+    it('oferece o ajuste somente nos dias que a API deixa editar (RN-06 e RN-07)', async () => {
+      atual = resposta({
+        dias: [
+          dia({ data: '2026-12-07', editavel: true }),
+          dia({ id: 'd-2', data: '2026-12-08', editavel: false }),
+        ],
+      });
+
+      await montar();
+
+      const botoes = [...(fixture.nativeElement as HTMLElement).querySelectorAll('.dias__ajustar')];
+      expect(botoes).toHaveLength(1);
+    });
+  });
 });

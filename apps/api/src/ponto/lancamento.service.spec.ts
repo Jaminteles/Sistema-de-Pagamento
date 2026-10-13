@@ -6,6 +6,7 @@ import {
   StatusPeriodo,
   TipoMarcacao,
 } from '@sistema/shared';
+import type { ApuracaoService } from '../apuracao/apuracao.service';
 import type { UsuarioRequisicao } from '../auth/tipos';
 import { dataIsoParaDate } from '../common/data/data-iso';
 import { horaLocalParaInstante } from '../common/data/fuso-negocio';
@@ -153,7 +154,13 @@ describe('LancamentoService (T-032 a T-035)', () => {
       }),
     } as unknown as PontoRepository;
 
-    servico = new LancamentoService(repositorio);
+    // A apuracao (RF-020) tem teste proprio (motor-apuracao.spec): aqui ela so
+    // devolve os dias gravados, para o teste ficar no lancamento.
+    const apuracao = {
+      apurar: (dias: DiaPontoRegistro[]) => Promise.resolve(dias),
+    } as unknown as ApuracaoService;
+
+    servico = new LancamentoService(repositorio, apuracao);
   });
 
   const semEscopo = { obrasPermitidas: null };

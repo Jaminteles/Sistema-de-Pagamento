@@ -17,3 +17,4 @@ export * from './contracts/funcionario.js';
 export * from './contracts/jornada.js';
 export * from './contracts/feriado.js';
 export * from './contracts/ponto.js';
+export * from './contracts/apuracao.js';

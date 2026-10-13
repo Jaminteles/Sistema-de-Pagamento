@@ -11,14 +11,17 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormArray, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   type DiaPontoResponse,
   type ErroLancamentoResponse,
   type JornadaResumoResponse,
+  LOCALE_PADRAO,
   minutosParaDuracao,
   type PontoFuncionarioResponse,
+  TIMEZONE_NEGOCIO,
 } from '@sistema/shared';
 import { mensagemDoErro } from '../../core/http/erro-api';
 import { NotificacaoService } from '../../core/notificacao/notificacao.service';
@@ -36,9 +39,16 @@ import {
   somarDias,
 } from './datas-ponto';
 import { assinatura, criarGrupo, type GrupoLancamento, paraMarcacoes } from './lancamento-form';
+import { type DadosAjustePonto, ModalAjustePontoComponent } from './modal-ajuste-ponto.component';
 import { PontoService } from './ponto.service';
 
 export type VisaoPonto = 'SEMANA' | 'MES';
+
+const FORMATADOR_MOMENTO = new Intl.DateTimeFormat(LOCALE_PADRAO, {
+  timeZone: TIMEZONE_NEGOCIO,
+  dateStyle: 'short',
+  timeStyle: 'short',
+});
 
 /** Uma linha da tela: o dia do calendario com o que a API sabe sobre ele. */
 interface LinhaDia {
@@ -80,6 +90,7 @@ export class PaginaPontoFuncionarioComponent {
   private readonly rota = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly notificacao = inject(NotificacaoService);
+  private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly funcionarioId = this.rota.snapshot.paramMap.get('id') ?? '';
@@ -198,6 +209,49 @@ export class PaginaPontoFuncionarioComponent {
 
   duracao(minutos: number): string {
     return minutosParaDuracao(minutos);
+  }
+
+  /** Momento da apuracao no fuso de negocio (RNF-12). */
+  momento(iso: string): string {
+    return FORMATADOR_MOMENTO.format(new Date(iso));
+  }
+
+  /**
+   * Abre o ajuste do dia (T-045 / RF-017).
+   *
+   * Dia nao editavel nem chega aqui: o botao so aparece quando a API disse que
+   * o usuario ainda pode escrever naquele dia (RN-06 e RN-07). Quem recusa de
+   * verdade continua sendo a API.
+   */
+  ajustar(linha: LinhaDia): void {
+    const dia = linha.dia;
+    const dados = this.dados();
+    if (!dia || !dados) {
+      return;
+    }
+
+    const referencia = this.dialog.open<
+      ModalAjustePontoComponent,
+      DadosAjustePonto,
+      DiaPontoResponse | undefined
+    >(ModalAjustePontoComponent, {
+      data: { dia, funcionarioNome: dados.funcionarioNome },
+      width: '34rem',
+      maxWidth: 'calc(100vw - 2rem)',
+      autoFocus: 'dialog',
+      restoreFocus: true,
+    });
+
+    referencia
+      .afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((ajustado) => {
+        if (ajustado) {
+          // Recarrega para o dia, os totais do periodo e o estado de edicao
+          // vierem todos da API, nunca remontados aqui.
+          this.carregar();
+        }
+      });
   }
 
   salvar(): void {

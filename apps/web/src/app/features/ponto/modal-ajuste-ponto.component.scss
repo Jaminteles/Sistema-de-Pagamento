@@ -1,0 +1,62 @@
+.ajuste__dia {
+  margin: 0 0 1rem;
+  font-weight: 500;
+}
+
+.ajuste__justificativa {
+  width: 100%;
+  margin-top: 0.75rem;
+}
+
+.ajuste__erro {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0.5rem 0 0;
+  color: var(--mat-sys-error);
+}
+
+.ajuste__historico {
+  margin-top: 1.5rem;
+
+  h3 {
+    margin: 0 0 0.5rem;
+    font-size: 0.95rem;
+    font-weight: 500;
+  }
+}
+
+.ajuste__vazio {
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.linha-tempo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.linha-tempo__item {
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--mat-sys-outline-variant);
+
+  p {
+    margin: 0;
+  }
+}
+
+.linha-tempo__mudanca {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.linha-tempo__autor,
+.linha-tempo__justificativa {
+  font-size: 0.85rem;
+  color: var(--mat-sys-on-surface-variant);
+}

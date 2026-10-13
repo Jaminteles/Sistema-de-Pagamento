@@ -1,0 +1,67 @@
+.envio__cabecalho {
+  margin: 0 0 0.75rem;
+  font-weight: 500;
+}
+
+.envio__numeros {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+
+  dt {
+    font-size: 0.8rem;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  dd {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 500;
+  }
+}
+
+.envio__aviso,
+.envio__ok,
+.envio__bloqueio {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0 0 0.75rem;
+}
+
+.envio__bloqueio {
+  color: var(--mat-sys-error);
+}
+
+.pendencias {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  p {
+    margin: 0;
+  }
+}
+
+.pendencias__pessoa {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: baseline;
+  font-weight: 500;
+
+  span {
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.pendencias__detalhe {
+  font-size: 0.85rem;
+  color: var(--mat-sys-on-surface-variant);
+}

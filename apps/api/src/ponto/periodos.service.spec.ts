@@ -1,5 +1,6 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { StatusPeriodo } from '@sistema/shared';
+import type { ApuracaoService } from '../apuracao/apuracao.service';
 import { dataIsoParaDate, dateParaDataIso } from '../common/data/data-iso';
 import { PeriodosService } from './periodos.service';
 import type { PeriodoRegistro, PontoRepository, VinculoVigenteRegistro } from './ponto.repository';
@@ -79,7 +80,7 @@ describe('PeriodosService (T-031 / RF-013)', () => {
       }),
     } as unknown as PontoRepository;
 
-    servico = new PeriodosService(repositorio);
+    servico = new PeriodosService(repositorio, {} as unknown as ApuracaoService);
   });
 
   it('abre o periodo com o mes cheio (RN-01) e gera um dia por data', async () => {

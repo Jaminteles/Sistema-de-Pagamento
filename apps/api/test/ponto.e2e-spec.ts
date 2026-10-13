@@ -1,15 +1,22 @@
 import { type INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import {
+  type AjustarDiaResponse,
   API_PREFIX,
+  type ApurarPeriodoResponse,
+  CampoAjuste,
+  type EnviarPeriodoRhResponse,
   type GerarDiasResponse,
   type GradeEquipeResponse,
+  type ImportarMarcacoesResponse,
   type LancarPontoResponse,
   OcorrenciaDia,
+  OrigemMarcacao,
   type PeriodoResponse,
   PerfilUsuario,
   type PontoFuncionarioResponse,
   type RespostaPaginada,
+  type ResumoEnvioRhResponse,
   type SessaoResponse,
   StatusPeriodo,
   TipoMarcacao,
@@ -60,6 +67,10 @@ describe('Periodo, grade de equipe e lancamento por funcionario (e2e)', () => {
   let funcionarios: FuncionariosRepositorioEmMemoria;
   let ponto: PontoRepositorioEmMemoria;
 
+  let diaDeAna: string;
+  let diaDeBruno: string;
+  let diaFechadoDeAna: string;
+
   const ids: Record<string, string> = {};
   const tokens: Record<string, string> = {};
   const perfis: [string, PerfilUsuario][] = [
@@ -86,9 +97,14 @@ describe('Periodo, grade de equipe e lancamento por funcionario (e2e)', () => {
   beforeEach(() => {
     // Cada teste parte do mesmo estado de ponto: os de gravacao alteram os dias.
     ponto.diasPonto.length = 0;
-    ponto.semearDia({ periodoId: PERIODO_ABERTO, funcionarioId: ANA, data: DIA });
-    ponto.semearDia({ periodoId: PERIODO_ABERTO, funcionarioId: BRUNO, data: DIA });
-    ponto.semearDia({ periodoId: PERIODO_FECHADO, funcionarioId: ANA, data: DIA_FECHADO });
+    ponto.ajustes.length = 0;
+    diaDeAna = ponto.semearDia({ periodoId: PERIODO_ABERTO, funcionarioId: ANA, data: DIA }).id;
+    diaDeBruno = ponto.semearDia({ periodoId: PERIODO_ABERTO, funcionarioId: BRUNO, data: DIA }).id;
+    diaFechadoDeAna = ponto.semearDia({
+      periodoId: PERIODO_FECHADO,
+      funcionarioId: ANA,
+      data: DIA_FECHADO,
+    }).id;
   });
 
   beforeAll(async () => {
@@ -507,6 +523,298 @@ describe('Periodo, grade de equipe e lancamento por funcionario (e2e)', () => {
         .set('Authorization', autorizacao('rh'))
         .send({ competencia: 'dezembro' })
         .expect(400);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Sprint 6: ajuste (RF-017), envio ao RH (RF-018), importacao (RF-019) e
+  // apuracao (RF-020)
+  // ---------------------------------------------------------------------------
+
+  describe('ajuste de marcacao (T-040 / RF-017)', () => {
+    const justificativa = 'Esqueceu de bater a saida; conferido com o encarregado.';
+
+    it('recusa o FINANCEIRO no ajuste e no historico', async () => {
+      await request(baseUrl)
+        .put(`/api/ponto/dias/${diaDeAna}/ajuste`)
+        .set('Authorization', autorizacao('financeiro'))
+        .send({ justificativa, saida: '18:00' })
+        .expect(403);
+
+      await request(baseUrl)
+        .get(`/api/ponto/dias/${diaDeAna}/ajustes`)
+        .set('Authorization', autorizacao('financeiro'))
+        .expect(403);
+    });
+
+    it('responde 404 no dia de funcionario de outra obra (RN-05)', async () => {
+      await request(baseUrl)
+        .put(`/api/ponto/dias/${diaDeBruno}/ajuste`)
+        .set('Authorization', autorizacao('encarregado'))
+        .send({ justificativa, saida: '18:00' })
+        .expect(404);
+
+      await request(baseUrl)
+        .get(`/api/ponto/dias/${diaDeBruno}/ajustes`)
+        .set('Authorization', autorizacao('encarregado'))
+        .expect(404);
+    });
+
+    it('exige justificativa e recusa campo fora do contrato', async () => {
+      await request(baseUrl)
+        .put(`/api/ponto/dias/${diaDeAna}/ajuste`)
+        .set('Authorization', autorizacao('rh'))
+        .send({ saida: '18:00' })
+        .expect(400);
+
+      await request(baseUrl)
+        .put(`/api/ponto/dias/${diaDeAna}/ajuste`)
+        .set('Authorization', autorizacao('rh'))
+        .send({ justificativa: 'ok' })
+        .expect(400);
+
+      await request(baseUrl)
+        .put(`/api/ponto/dias/${diaDeAna}/ajuste`)
+        .set('Authorization', autorizacao('rh'))
+        .send({ justificativa, saida: '18:00', funcionarioId: BRUNO })
+        .expect(400);
+    });
+
+    it('grava o ajuste, reapura o dia e devolve a linha do tempo', async () => {
+      await request(baseUrl)
+        .put('/api/ponto/grade')
+        .set('Authorization', autorizacao('encarregado'))
+        .send({
+          obraId: OBRA_CENTRO,
+          data: DIA,
+          itens: [
+            {
+              funcionarioId: ANA,
+              entrada: '07:00',
+              saidaIntervalo: '11:00',
+              retornoIntervalo: '12:00',
+              saida: '17:00',
+            },
+          ],
+        })
+        .expect(200);
+
+      const resposta = await request(baseUrl)
+        .put(`/api/ponto/dias/${diaDeAna}/ajuste`)
+        .set('Authorization', autorizacao('rh'))
+        .send({ justificativa, saida: '18:00' })
+        .expect(200);
+
+      const corpo = resposta.body as AjustarDiaResponse;
+      expect(corpo.dia.marcacoes.find((item) => item.tipo === TipoMarcacao.SAIDA)?.hora).toBe(
+        '18:00',
+      );
+      // 07:00-11:00 e 12:00-18:00 = 10h, uma hora acima da jornada prevista.
+      expect(corpo.dia.minutosTrabalhados).toBe(600);
+      expect(corpo.dia.minutosExtras50).toBe(60);
+      expect(corpo.historico).toHaveLength(1);
+      expect(corpo.historico[0]?.campo).toBe(CampoAjuste.SAIDA);
+      expect(corpo.historico[0]?.valorAnterior).toBe('17:00');
+      expect(corpo.historico[0]?.valorNovo).toBe('18:00');
+      expect(corpo.historico[0]?.justificativa).toBe(justificativa);
+    });
+
+    it('recusa ajuste em periodo fechado, inclusive do ADMIN (RN-07)', async () => {
+      await request(baseUrl)
+        .put(`/api/ponto/dias/${diaFechadoDeAna}/ajuste`)
+        .set('Authorization', autorizacao('admin'))
+        .send({ justificativa, saida: '18:00' })
+        .expect(409);
+    });
+  });
+
+  describe('envio do periodo ao RH (T-041 / RF-018)', () => {
+    it('recusa o FINANCEIRO', async () => {
+      await request(baseUrl)
+        .get(`/api/ponto/periodos/${PERIODO_ABERTO}/resumo-envio?obraId=${OBRA_CENTRO}`)
+        .set('Authorization', autorizacao('financeiro'))
+        .expect(403);
+
+      await request(baseUrl)
+        .post(`/api/ponto/periodos/${PERIODO_ABERTO}/envio-rh`)
+        .set('Authorization', autorizacao('financeiro'))
+        .send({ obraId: OBRA_CENTRO })
+        .expect(403);
+    });
+
+    it('responde 404 para obra que nao e do encarregado (RN-05)', async () => {
+      await request(baseUrl)
+        .get(`/api/ponto/periodos/${PERIODO_ABERTO}/resumo-envio?obraId=${OBRA_LITORAL}`)
+        .set('Authorization', autorizacao('encarregado'))
+        .expect(404);
+
+      await request(baseUrl)
+        .post(`/api/ponto/periodos/${PERIODO_ABERTO}/envio-rh`)
+        .set('Authorization', autorizacao('encarregado'))
+        .send({ obraId: OBRA_LITORAL })
+        .expect(404);
+    });
+
+    it('acusa o dia sem lancamento no resumo da equipe', async () => {
+      const resposta = await request(baseUrl)
+        .get(`/api/ponto/periodos/${PERIODO_ABERTO}/resumo-envio?obraId=${OBRA_CENTRO}`)
+        .set('Authorization', autorizacao('encarregado'))
+        .expect(200);
+
+      const corpo = resposta.body as ResumoEnvioRhResponse;
+      expect(corpo.funcionarios).toBe(1);
+      expect(corpo.podeEnviar).toBe(true);
+      expect(corpo.totalPendencias).toBe(1);
+      expect(corpo.pendencias[0]?.diasSemLancamento).toEqual([DIA]);
+    });
+
+    it('envia a equipe e bloqueia o encarregado naquele dia (RN-06)', async () => {
+      const envio = await request(baseUrl)
+        .post(`/api/ponto/periodos/${PERIODO_ABERTO}/envio-rh`)
+        .set('Authorization', autorizacao('encarregado'))
+        .send({ obraId: OBRA_CENTRO })
+        .expect(200);
+
+      const corpo = envio.body as EnviarPeriodoRhResponse;
+      expect(corpo.diasEnviados).toBe(1);
+      expect(corpo.funcionarios).toBe(1);
+
+      const grade = await request(baseUrl)
+        .get(`/api/ponto/grade?obraId=${OBRA_CENTRO}&data=${DIA}`)
+        .set('Authorization', autorizacao('encarregado'))
+        .expect(200);
+
+      expect((grade.body as GradeEquipeResponse).linhas[0]?.dia?.editavel).toBe(false);
+
+      const lancamento = await request(baseUrl)
+        .put('/api/ponto/grade')
+        .set('Authorization', autorizacao('encarregado'))
+        .send({ obraId: OBRA_CENTRO, data: DIA, itens: [{ funcionarioId: ANA, entrada: '08:00' }] })
+        .expect(200);
+
+      const resultado = lancamento.body as LancarPontoResponse;
+      expect(resultado.salvos).toBe(0);
+      expect(resultado.erros[0]?.motivo).toContain('enviado ao RH');
+
+      // O RH continua podendo ajustar o que recebeu.
+      await request(baseUrl)
+        .put(`/api/ponto/dias/${diaDeAna}/ajuste`)
+        .set('Authorization', autorizacao('rh'))
+        .send({ justificativa: 'Conferencia do RH apos o envio da equipe.', entrada: '07:00' })
+        .expect(200);
+    });
+
+    it('repete o envio sem contar o mesmo dia duas vezes', async () => {
+      await request(baseUrl)
+        .post(`/api/ponto/periodos/${PERIODO_ABERTO}/envio-rh`)
+        .set('Authorization', autorizacao('rh'))
+        .send({ obraId: OBRA_CENTRO })
+        .expect(200);
+
+      const segundo = await request(baseUrl)
+        .post(`/api/ponto/periodos/${PERIODO_ABERTO}/envio-rh`)
+        .set('Authorization', autorizacao('rh'))
+        .send({ obraId: OBRA_CENTRO })
+        .expect(200);
+
+      expect((segundo.body as EnviarPeriodoRhResponse).diasEnviados).toBe(0);
+    });
+  });
+
+  describe('importacao de marcacoes por CSV (T-042 / RF-019)', () => {
+    const csv = [
+      'matricula;data;entrada;saida_intervalo;retorno_intervalo;saida',
+      `001;${DIA};07:00;11:00;12:00;17:00`,
+    ].join('\n');
+
+    it('deixa a importacao apenas para ADMIN e RH', async () => {
+      for (const chave of ['encarregado', 'financeiro']) {
+        await request(baseUrl)
+          .post('/api/ponto/marcacoes/importacao')
+          .set('Authorization', autorizacao(chave))
+          .attach('arquivo', Buffer.from(csv, 'utf8'), 'marcacoes.csv')
+          .expect(403);
+      }
+    });
+
+    it('recusa a chamada sem arquivo', async () => {
+      await request(baseUrl)
+        .post('/api/ponto/marcacoes/importacao')
+        .set('Authorization', autorizacao('rh'))
+        .expect(400);
+    });
+
+    it('importa o dia com origem IMPORTADO e ja apurado', async () => {
+      const resposta = await request(baseUrl)
+        .post('/api/ponto/marcacoes/importacao')
+        .set('Authorization', autorizacao('rh'))
+        .attach('arquivo', Buffer.from(csv, 'utf8'), 'marcacoes.csv')
+        .expect(200);
+
+      const corpo = resposta.body as ImportarMarcacoesResponse;
+      expect(corpo.totalLinhas).toBe(1);
+      expect(corpo.gravados).toBe(1);
+      expect(corpo.erros).toEqual([]);
+
+      const grade = await request(baseUrl)
+        .get(`/api/ponto/grade?obraId=${OBRA_CENTRO}&data=${DIA}`)
+        .set('Authorization', autorizacao('rh'))
+        .expect(200);
+
+      const dia = (grade.body as GradeEquipeResponse).linhas[0]?.dia;
+      expect(dia?.marcacoes.every((marcacao) => marcacao.origem === OrigemMarcacao.IMPORTADO)).toBe(
+        true,
+      );
+      expect(dia?.minutosTrabalhados).toBe(540);
+      expect(dia?.apuradoEm).not.toBeNull();
+    });
+  });
+
+  describe('apuracao do periodo (T-043 / RF-020)', () => {
+    it('deixa o recalculo apenas para ADMIN e RH', async () => {
+      for (const chave of ['encarregado', 'financeiro']) {
+        await request(baseUrl)
+          .post(`/api/ponto/periodos/${PERIODO_ABERTO}/apuracao`)
+          .set('Authorization', autorizacao(chave))
+          .expect(403);
+      }
+    });
+
+    it('recalcula os totais do periodo', async () => {
+      await request(baseUrl)
+        .put('/api/ponto/grade')
+        .set('Authorization', autorizacao('rh'))
+        .send({
+          obraId: OBRA_CENTRO,
+          data: DIA,
+          itens: [
+            {
+              funcionarioId: ANA,
+              entrada: '07:00',
+              saidaIntervalo: '11:00',
+              retornoIntervalo: '12:00',
+              saida: '17:30',
+            },
+          ],
+        })
+        .expect(200);
+
+      const resposta = await request(baseUrl)
+        .post(`/api/ponto/periodos/${PERIODO_ABERTO}/apuracao`)
+        .set('Authorization', autorizacao('rh'))
+        .expect(200);
+
+      const corpo = resposta.body as ApurarPeriodoResponse;
+      expect(corpo.dias).toBe(2);
+      expect(corpo.totais.minutosTrabalhados).toBe(570);
+      expect(corpo.totais.minutosExtras50).toBe(30);
+    });
+
+    it('responde 404 em periodo inexistente', async () => {
+      await request(baseUrl)
+        .post('/api/ponto/periodos/019a0000-0000-7000-8000-0000000000ff/apuracao')
+        .set('Authorization', autorizacao('rh'))
+        .expect(404);
     });
   });
 });

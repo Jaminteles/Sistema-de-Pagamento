@@ -108,6 +108,18 @@ enum OrigemMarcacao {
   @@map("origem_marcacao")
 }
 
+/// RF-017: campo do dia alterado por um ajuste, para a linha do tempo da tela.
+enum CampoAjuste {
+  ENTRADA
+  SAIDA_INTERVALO
+  RETORNO_INTERVALO
+  SAIDA
+  OCORRENCIA
+  OBSERVACAO
+
+  @@map("campo_ajuste")
+}
+
 enum TipoValorPagar {
   SALARIO
   ADIANTAMENTO
@@ -400,6 +412,7 @@ model DiaPonto {
   periodo     Periodo     @relation(fields: [periodoId], references: [id], onDelete: Restrict)
   funcionario Funcionario @relation(fields: [funcionarioId], references: [id], onDelete: Restrict)
   marcacoes   Marcacao[]
+  ajustes     AjustePonto[]
 
   @@unique([funcionarioId, data])
   @@index([periodoId, data])
@@ -425,18 +438,31 @@ model Marcacao {
 }
 
 /// RF-017: todo ajuste guarda valor anterior, valor novo, justificativa e autor.
+///
+/// O historico pertence ao dia, nao a marcacao: apagar uma batida e um ajuste
+/// como qualquer outro e nao pode levar o registro embora. Por isso diaPontoId e
+/// obrigatorio e marcacaoId e opcional (SetNull), e o campo alterado fica em
+/// `campo`, que tambem cobre a troca de ocorrencia e de observacao do dia.
 model AjustePonto {
-  id            String    @id @default(uuid(7)) @db.Uuid
-  marcacaoId    String    @map("marcacao_id") @db.Uuid
-  valorAnterior DateTime? @map("valor_anterior") @db.Timestamptz(3)
-  valorNovo     DateTime? @map("valor_novo") @db.Timestamptz(3)
-  justificativa String    @db.VarChar(500)
-  usuarioId     String    @map("usuario_id") @db.Uuid
-  criadoEm      DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  id            String        @id @default(uuid(7)) @db.Uuid
+  diaPontoId    String        @map("dia_ponto_id") @db.Uuid
+  marcacaoId    String?       @map("marcacao_id") @db.Uuid
+  campo         CampoAjuste
+  /// Horario anterior, quando o campo e uma marcacao.
+  valorAnterior DateTime?     @map("valor_anterior") @db.Timestamptz(3)
+  valorNovo     DateTime?     @map("valor_novo") @db.Timestamptz(3)
+  /// Valor anterior em texto, quando o campo e ocorrencia ou observacao.
+  textoAnterior String?       @map("texto_anterior") @db.VarChar(500)
+  textoNovo     String?       @map("texto_novo") @db.VarChar(500)
+  justificativa String        @db.VarChar(500)
+  usuarioId     String        @map("usuario_id") @db.Uuid
+  criadoEm      DateTime      @default(now()) @map("criado_em") @db.Timestamptz(3)
 
-  marcacao Marcacao @relation(fields: [marcacaoId], references: [id], onDelete: Cascade)
-  usuario  Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  diaPonto DiaPonto  @relation(fields: [diaPontoId], references: [id], onDelete: Cascade)
+  marcacao Marcacao? @relation(fields: [marcacaoId], references: [id], onDelete: SetNull)
+  usuario  Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
 
+  @@index([diaPontoId, criadoEm])
   @@index([marcacaoId, criadoEm])
   @@map("ajuste_ponto")
 }

@@ -242,6 +242,22 @@ export class FuncionariosRepositorioEmMemoria {
     });
   }
 
+  identificar(
+    cpfs: readonly string[],
+    matriculas: readonly string[],
+  ): Promise<{ id: string; nome: string; cpf: string; matricula: string }[]> {
+    return Promise.resolve(
+      this.funcionarios
+        .filter((item) => cpfs.includes(item.cpf) || matriculas.includes(item.matricula))
+        .map((item) => ({
+          id: item.id,
+          nome: item.nome,
+          cpf: item.cpf,
+          matricula: item.matricula,
+        })),
+    );
+  }
+
   criarMuitos(itens: readonly DadosFuncionario[]): Promise<number> {
     for (const item of itens) {
       this.semear({ id: randomUUID(), ...item });

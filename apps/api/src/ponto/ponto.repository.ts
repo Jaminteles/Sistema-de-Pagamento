@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import type {
+  CampoAjuste,
   OcorrenciaDia,
   OrigemMarcacao,
   StatusEnvioDia,
   StatusPeriodo,
   TipoMarcacao,
+  TotaisPontoResponse,
 } from '@sistema/shared';
 import { PrismaService } from '../common/prisma/prisma.service';
 
@@ -89,6 +91,8 @@ export interface FeriadoDoDia {
 export interface MarcacaoGravavel {
   tipo: TipoMarcacao;
   horario: Date;
+  /** MANUAL na grade, IMPORTADO no CSV (RF-019), AJUSTE no ajuste (RF-017). */
+  origem: OrigemMarcacao;
 }
 
 /**
@@ -113,6 +117,53 @@ export interface FiltroPeriodos {
   status?: StatusPeriodo;
   pular: number;
   limite: number;
+}
+
+/** Uma alteracao a registrar no historico do dia (RF-017). */
+export interface AjusteGravavel {
+  campo: CampoAjuste;
+  /** Preenchido quando o campo e uma marcacao que continua existindo. */
+  marcacaoId?: string | null;
+  valorAnterior?: Date | null;
+  valorNovo?: Date | null;
+  textoAnterior?: string | null;
+  textoNovo?: string | null;
+}
+
+/**
+ * Ajuste de um dia inteiro (RF-017).
+ *
+ * As marcacoes seguem o mesmo contrato do lancamento (upsert em [dia, tipo] e
+ * `remover` para as que sairam); o que muda e o historico, gravado na mesma
+ * transacao com a justificativa e o autor.
+ */
+export interface AjusteDiaGravavel {
+  diaPontoId: string;
+  ocorrencia: OcorrenciaDia;
+  observacao: string | null;
+  marcacoes: MarcacaoGravavel[];
+  remover: TipoMarcacao[];
+  justificativa: string;
+  usuarioId: string;
+  alteracoes: AjusteGravavel[];
+}
+
+export interface AjusteRegistro {
+  id: string;
+  campo: CampoAjuste;
+  valorAnterior: Date | null;
+  valorNovo: Date | null;
+  textoAnterior: string | null;
+  textoNovo: string | null;
+  justificativa: string;
+  usuarioNome: string;
+  criadoEm: Date;
+}
+
+/** Totais calculados pelo motor de apuracao, prontos para gravar (RF-020). */
+export interface TotaisGravaveis {
+  diaPontoId: string;
+  totais: TotaisPontoResponse;
 }
 
 const CAMPOS_PERIODO = {
@@ -297,13 +348,18 @@ export class PontoRepository {
   async vinculosNoIntervalo(
     inicio: Date,
     fim: Date,
-    filtro: { obrasPermitidas?: readonly string[]; funcionarioId?: string } = {},
+    filtro: {
+      obrasPermitidas?: readonly string[];
+      funcionarioId?: string;
+      funcionariosIds?: readonly string[];
+    } = {},
   ): Promise<VinculoVigenteRegistro[]> {
     const itens = await this.prisma.vinculoFuncionario.findMany({
       where: {
         ...this.vigenteNoIntervalo(inicio, fim),
         ...(filtro.obrasPermitidas ? { obraId: { in: [...filtro.obrasPermitidas] } } : {}),
         ...(filtro.funcionarioId ? { funcionarioId: filtro.funcionarioId } : {}),
+        ...(filtro.funcionariosIds ? { funcionarioId: { in: [...filtro.funcionariosIds] } } : {}),
       },
       select: CAMPOS_VINCULO,
       orderBy: [{ inicioVigencia: 'asc' }],
@@ -378,8 +434,13 @@ export class PontoRepository {
         for (const marcacao of lancamento.marcacoes) {
           await tx.marcacao.upsert({
             where: { diaPontoId_tipo: { diaPontoId: dia.id, tipo: marcacao.tipo } },
-            create: { diaPontoId: dia.id, tipo: marcacao.tipo, horario: marcacao.horario },
-            update: { horario: marcacao.horario },
+            create: {
+              diaPontoId: dia.id,
+              tipo: marcacao.tipo,
+              horario: marcacao.horario,
+              origem: marcacao.origem,
+            },
+            update: { horario: marcacao.horario, origem: marcacao.origem },
             select: { id: true },
           });
         }
@@ -398,5 +459,199 @@ export class PontoRepository {
       });
       return salvos;
     });
+  }
+
+  // -------------------------------------------------------------------------
+  // RF-017 - ajuste com justificativa e historico
+  // -------------------------------------------------------------------------
+
+  buscarDia(id: string): Promise<DiaPontoRegistro | null> {
+    return this.prisma.diaPonto.findUnique({ where: { id }, select: CAMPOS_DIA });
+  }
+
+  /**
+   * Aplica o ajuste e grava o historico na mesma transacao (RF-017).
+   *
+   * Historico e dado do dia, nao da marcacao: apagar uma batida errada tambem e
+   * ajuste, e o registro precisa sobreviver a isso. Por isso as alteracoes sao
+   * gravadas depois do upsert (para a marcacao nova ja ter id) e antes do
+   * delete, cujo SET NULL apenas solta o vinculo.
+   */
+  async ajustar(ajuste: AjusteDiaGravavel): Promise<DiaPontoRegistro> {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.diaPonto.update({
+        where: { id: ajuste.diaPontoId },
+        data: { ocorrencia: ajuste.ocorrencia, observacao: ajuste.observacao },
+        select: { id: true },
+      });
+
+      const idPorTipo = new Map<TipoMarcacao, string>();
+
+      for (const marcacao of ajuste.marcacoes) {
+        const gravada = await tx.marcacao.upsert({
+          where: { diaPontoId_tipo: { diaPontoId: ajuste.diaPontoId, tipo: marcacao.tipo } },
+          create: {
+            diaPontoId: ajuste.diaPontoId,
+            tipo: marcacao.tipo,
+            horario: marcacao.horario,
+            origem: marcacao.origem,
+          },
+          update: { horario: marcacao.horario, origem: marcacao.origem },
+          select: { id: true },
+        });
+        idPorTipo.set(marcacao.tipo, gravada.id);
+      }
+
+      if (ajuste.alteracoes.length > 0) {
+        await tx.ajustePonto.createMany({
+          data: ajuste.alteracoes.map((alteracao) => ({
+            diaPontoId: ajuste.diaPontoId,
+            marcacaoId:
+              alteracao.marcacaoId ?? idPorTipo.get(alteracao.campo as TipoMarcacao) ?? null,
+            campo: alteracao.campo,
+            valorAnterior: alteracao.valorAnterior ?? null,
+            valorNovo: alteracao.valorNovo ?? null,
+            textoAnterior: alteracao.textoAnterior ?? null,
+            textoNovo: alteracao.textoNovo ?? null,
+            justificativa: ajuste.justificativa,
+            usuarioId: ajuste.usuarioId,
+          })),
+        });
+      }
+
+      if (ajuste.remover.length > 0) {
+        await tx.marcacao.deleteMany({
+          where: { diaPontoId: ajuste.diaPontoId, tipo: { in: ajuste.remover } },
+        });
+      }
+
+      const dia = await tx.diaPonto.findUniqueOrThrow({
+        where: { id: ajuste.diaPontoId },
+        select: CAMPOS_DIA,
+      });
+      return dia;
+    });
+  }
+
+  /** Linha do tempo do dia, do ajuste mais recente para o mais antigo. */
+  async historicoDoDia(diaPontoId: string, limite: number): Promise<AjusteRegistro[]> {
+    const itens = await this.prisma.ajustePonto.findMany({
+      where: { diaPontoId },
+      select: {
+        id: true,
+        campo: true,
+        valorAnterior: true,
+        valorNovo: true,
+        textoAnterior: true,
+        textoNovo: true,
+        justificativa: true,
+        criadoEm: true,
+        usuario: { select: { nome: true } },
+      },
+      orderBy: [{ criadoEm: 'desc' }],
+      take: limite,
+    });
+
+    return itens.map((item) => ({
+      id: item.id,
+      campo: item.campo,
+      valorAnterior: item.valorAnterior,
+      valorNovo: item.valorNovo,
+      textoAnterior: item.textoAnterior,
+      textoNovo: item.textoNovo,
+      justificativa: item.justificativa,
+      usuarioNome: item.usuario.nome,
+      criadoEm: item.criadoEm,
+    }));
+  }
+
+  // -------------------------------------------------------------------------
+  // RF-018 - envio do periodo ao RH
+  // -------------------------------------------------------------------------
+
+  /** Dias do periodo, com as marcacoes. Sem filtro de funcionario traz todos. */
+  diasDoPeriodo(
+    periodoId: string,
+    funcionariosIds?: readonly string[],
+  ): Promise<DiaPontoRegistro[]> {
+    return this.prisma.diaPonto.findMany({
+      where: {
+        periodoId,
+        ...(funcionariosIds ? { funcionarioId: { in: [...funcionariosIds] } } : {}),
+      },
+      select: CAMPOS_DIA,
+      orderBy: [{ data: 'asc' }],
+    });
+  }
+
+  /**
+   * Marca os dias da equipe como enviados ao RH e, quando nao sobra nenhum dia
+   * pendente, passa o periodo para EM_CONFERENCIA (RF-018, RN-06).
+   *
+   * Transacao unica e `statusEnvio: NAO_ENVIADO` no filtro: dois cliques no
+   * botao nao reenviam o que ja foi enviado nem contam o dia duas vezes.
+   */
+  async enviarAoRh(
+    periodoId: string,
+    funcionariosIds: readonly string[],
+  ): Promise<{ diasEnviados: number; periodo: PeriodoRegistro }> {
+    if (funcionariosIds.length === 0) {
+      const periodo = await this.prisma.periodo.findUniqueOrThrow({
+        where: { id: periodoId },
+        select: CAMPOS_PERIODO,
+      });
+      return { diasEnviados: 0, periodo };
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const atualizados = await tx.diaPonto.updateMany({
+        where: {
+          periodoId,
+          funcionarioId: { in: [...funcionariosIds] },
+          statusEnvio: 'NAO_ENVIADO',
+        },
+        data: { statusEnvio: 'ENVIADO_RH' },
+      });
+
+      const pendentes = await tx.diaPonto.count({
+        where: { periodoId, statusEnvio: 'NAO_ENVIADO' },
+      });
+
+      const periodo = await tx.periodo.update({
+        where: { id: periodoId },
+        data: pendentes === 0 ? { status: 'EM_CONFERENCIA' } : {},
+        select: CAMPOS_PERIODO,
+      });
+
+      return { diasEnviados: atualizados.count, periodo };
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // RF-020 - totais da apuracao
+  // -------------------------------------------------------------------------
+
+  /**
+   * Grava os totais calculados pelo motor de apuracao.
+   *
+   * Uma transacao para o lote inteiro: o periodo recalculado nunca fica com
+   * metade dos dias no valor antigo.
+   */
+  async salvarTotais(itens: readonly TotaisGravaveis[], apuradoEm: Date): Promise<number> {
+    if (itens.length === 0) {
+      return 0;
+    }
+
+    await this.prisma.$transaction(
+      itens.map((item) =>
+        this.prisma.diaPonto.update({
+          where: { id: item.diaPontoId },
+          data: { ...item.totais, apuradoEm },
+          select: { id: true },
+        }),
+      ),
+    );
+
+    return itens.length;
   }
 }

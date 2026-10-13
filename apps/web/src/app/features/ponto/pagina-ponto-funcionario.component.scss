@@ -18,6 +18,12 @@
   gap: 0.25rem;
 }
 
+.totais__titulo {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
 .totais {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
@@ -85,10 +91,33 @@
   }
 }
 
+// Totais do dia calculados pela API (RF-020): seis numeros que precisam caber
+// no celular sem virar tabela rolavel.
 .dias__totais {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(5rem, 1fr));
+  gap: 0.25rem 0.75rem;
   margin: 0;
   font-size: 0.75rem;
-  opacity: 0.75;
+
+  dt {
+    opacity: 0.75;
+  }
+
+  dd {
+    margin: 0;
+    font-weight: 600;
+  }
+}
+
+.dias__apuracao {
+  margin: 0.25rem 0 0;
+  font-size: 0.7rem;
+  opacity: 0.6;
+}
+
+.dias__ajustar {
+  margin-left: auto;
 }
 
 .barra-salvar {

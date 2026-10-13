@@ -100,3 +100,33 @@ export const TIPO_MARCACAO_LABEL: Readonly<Record<TipoMarcacao, string>> = {
 
 export const STATUS_PERIODO: readonly StatusPeriodo[] = Object.values(StatusPeriodo);
 export const TIPOS_MARCACAO: readonly TipoMarcacao[] = Object.values(TipoMarcacao);
+
+/**
+ * Campo alterado por um ajuste (RF-017).
+ *
+ * As quatro marcacoes mais a ocorrencia e a observacao do dia. Nao inclui o
+ * "DIA" de CampoLancamento: esse e um erro de lancamento, nao uma alteracao.
+ */
+export const CampoAjuste = {
+  ENTRADA: 'ENTRADA',
+  SAIDA_INTERVALO: 'SAIDA_INTERVALO',
+  RETORNO_INTERVALO: 'RETORNO_INTERVALO',
+  SAIDA: 'SAIDA',
+  OCORRENCIA: 'OCORRENCIA',
+  OBSERVACAO: 'OBSERVACAO',
+} as const;
+export type CampoAjuste = (typeof CampoAjuste)[keyof typeof CampoAjuste];
+
+export const CAMPO_AJUSTE_LABEL: Readonly<Record<CampoAjuste, string>> = {
+  ENTRADA: 'Entrada',
+  SAIDA_INTERVALO: 'Saida do intervalo',
+  RETORNO_INTERVALO: 'Retorno do intervalo',
+  SAIDA: 'Saida',
+  OCORRENCIA: 'Ocorrencia',
+  OBSERVACAO: 'Observacao',
+};
+
+/** Verdadeiro quando o campo ajustado e uma das quatro marcacoes de horario. */
+export function campoEhMarcacao(campo: CampoAjuste): campo is TipoMarcacao {
+  return (TIPOS_MARCACAO as readonly string[]).includes(campo);
+}

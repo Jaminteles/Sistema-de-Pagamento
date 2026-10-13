@@ -92,6 +92,12 @@
         <mat-icon aria-hidden="true">content_copy</mat-icon>
         Replicar a primeira linha
       </button>
+      @if (grade()?.periodo) {
+        <button matButton="outlined" type="button" (click)="enviarAoRh()">
+          <mat-icon aria-hidden="true">send</mat-icon>
+          Enviar ao RH
+        </button>
+      }
     </div>
 
     <div class="grade" #area>

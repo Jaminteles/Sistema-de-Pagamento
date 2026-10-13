@@ -1,13 +1,16 @@
 import { randomUUID } from 'node:crypto';
-import { OcorrenciaDia, OrigemMarcacao, StatusEnvioDia, StatusPeriodo } from '@sistema/shared';
+import { OcorrenciaDia, StatusEnvioDia, StatusPeriodo } from '@sistema/shared';
 import { dataIsoParaDate } from '../src/common/data/data-iso';
 import type {
+  AjusteDiaGravavel,
+  AjusteRegistro,
   DiaPontoRegistro,
   FeriadoDoDia,
   FiltroPeriodos,
   JornadaResumo,
   LancamentoGravavel,
   PeriodoRegistro,
+  TotaisGravaveis,
   VinculoVigenteRegistro,
 } from '../src/ponto/ponto.repository';
 
@@ -59,6 +62,10 @@ export class PontoRepositorioEmMemoria {
   readonly vinculos: VinculoVigenteRegistro[] = [];
   readonly diasPonto: DiaPontoRegistro[] = [];
   readonly feriadosCadastrados: FeriadoDoDia[] = [];
+  /** Historico de ajustes do duble, com o dia a que pertence (RF-017). */
+  readonly ajustes: (AjusteRegistro & { diaPontoId: string })[] = [];
+  /** Nome do autor do ajuste, so para a linha do tempo do teste. */
+  readonly nomePorUsuario = new Map<string, string>();
 
   semearPeriodo(periodo: {
     id: string;
@@ -220,14 +227,20 @@ export class PontoRepositorioEmMemoria {
   vinculosNoIntervalo(
     inicio: Date,
     fim: Date,
-    filtro: { obrasPermitidas?: readonly string[]; funcionarioId?: string } = {},
+    filtro: {
+      obrasPermitidas?: readonly string[];
+      funcionarioId?: string;
+      funcionariosIds?: readonly string[];
+    } = {},
   ): Promise<VinculoVigenteRegistro[]> {
     return Promise.resolve(
       this.vinculos.filter(
         (item) =>
           this.vigenteEm(item, inicio, fim) &&
           (filtro.obrasPermitidas === undefined || filtro.obrasPermitidas.includes(item.obraId)) &&
-          (filtro.funcionarioId === undefined || filtro.funcionarioId === item.funcionarioId),
+          (filtro.funcionarioId === undefined || filtro.funcionarioId === item.funcionarioId) &&
+          (filtro.funcionariosIds === undefined ||
+            filtro.funcionariosIds.includes(item.funcionarioId)),
       ),
     );
   }
@@ -278,12 +291,13 @@ export class PontoRepositorioEmMemoria {
         const existente = dia.marcacoes.find((item) => item.tipo === marcacao.tipo);
         if (existente) {
           existente.horario = marcacao.horario;
+          existente.origem = marcacao.origem;
         } else {
           dia.marcacoes.push({
             id: randomUUID(),
             tipo: marcacao.tipo,
             horario: marcacao.horario,
-            origem: OrigemMarcacao.MANUAL,
+            origem: marcacao.origem,
           });
         }
       }
@@ -296,5 +310,123 @@ export class PontoRepositorioEmMemoria {
     }
 
     return Promise.resolve(salvos);
+  }
+
+  // -------------------------------------------------------------------------
+  // Sprint 6: ajuste (RF-017), envio ao RH (RF-018) e apuracao (RF-020)
+  // -------------------------------------------------------------------------
+
+  buscarDia(id: string): Promise<DiaPontoRegistro | null> {
+    return Promise.resolve(this.diasPonto.find((dia) => dia.id === id) ?? null);
+  }
+
+  diasDoPeriodo(
+    periodoId: string,
+    funcionariosIds?: readonly string[],
+  ): Promise<DiaPontoRegistro[]> {
+    return Promise.resolve(
+      this.diasPonto
+        .filter(
+          (dia) =>
+            dia.periodoId === periodoId &&
+            (funcionariosIds === undefined || funcionariosIds.includes(dia.funcionarioId)),
+        )
+        .sort((a, b) => a.data.getTime() - b.data.getTime()),
+    );
+  }
+
+  ajustar(ajuste: AjusteDiaGravavel): Promise<DiaPontoRegistro> {
+    const dia = this.diasPonto.find((item) => item.id === ajuste.diaPontoId);
+    if (!dia) {
+      return Promise.reject(new Error('dia de ponto inexistente no duble'));
+    }
+
+    dia.ocorrencia = ajuste.ocorrencia;
+    dia.observacao = ajuste.observacao;
+
+    for (const marcacao of ajuste.marcacoes) {
+      const existente = dia.marcacoes.find((item) => item.tipo === marcacao.tipo);
+      if (existente) {
+        existente.horario = marcacao.horario;
+        existente.origem = marcacao.origem;
+      } else {
+        dia.marcacoes.push({
+          id: randomUUID(),
+          tipo: marcacao.tipo,
+          horario: marcacao.horario,
+          origem: marcacao.origem,
+        });
+      }
+    }
+
+    dia.marcacoes = dia.marcacoes
+      .filter((item) => !ajuste.remover.includes(item.tipo))
+      .sort((a, b) => a.horario.getTime() - b.horario.getTime());
+
+    for (const alteracao of ajuste.alteracoes) {
+      this.ajustes.push({
+        id: randomUUID(),
+        diaPontoId: ajuste.diaPontoId,
+        campo: alteracao.campo,
+        valorAnterior: alteracao.valorAnterior ?? null,
+        valorNovo: alteracao.valorNovo ?? null,
+        textoAnterior: alteracao.textoAnterior ?? null,
+        textoNovo: alteracao.textoNovo ?? null,
+        justificativa: ajuste.justificativa,
+        usuarioNome: this.nomePorUsuario.get(ajuste.usuarioId) ?? 'Usuario',
+        criadoEm: new Date(),
+      });
+    }
+
+    return Promise.resolve(dia);
+  }
+
+  historicoDoDia(diaPontoId: string, limite: number): Promise<AjusteRegistro[]> {
+    return Promise.resolve(
+      this.ajustes
+        .filter((ajuste) => ajuste.diaPontoId === diaPontoId)
+        .sort((a, b) => b.criadoEm.getTime() - a.criadoEm.getTime())
+        .slice(0, limite)
+        .map(({ diaPontoId: _ignorado, ...registro }) => registro),
+    );
+  }
+
+  enviarAoRh(
+    periodoId: string,
+    funcionariosIds: readonly string[],
+  ): Promise<{ diasEnviados: number; periodo: PeriodoRegistro }> {
+    const periodo = this.periodos.find((item) => item.id === periodoId) as PeriodoRegistro;
+    let diasEnviados = 0;
+
+    for (const dia of this.diasPonto) {
+      if (
+        dia.periodoId === periodoId &&
+        funcionariosIds.includes(dia.funcionarioId) &&
+        dia.statusEnvio === StatusEnvioDia.NAO_ENVIADO
+      ) {
+        dia.statusEnvio = StatusEnvioDia.ENVIADO_RH;
+        diasEnviados += 1;
+      }
+    }
+
+    const pendentes = this.diasPonto.filter(
+      (dia) => dia.periodoId === periodoId && dia.statusEnvio === StatusEnvioDia.NAO_ENVIADO,
+    ).length;
+
+    if (pendentes === 0) {
+      periodo.status = StatusPeriodo.EM_CONFERENCIA;
+    }
+
+    return Promise.resolve({ diasEnviados, periodo });
+  }
+
+  salvarTotais(itens: readonly TotaisGravaveis[], apuradoEm: Date): Promise<number> {
+    for (const item of itens) {
+      const dia = this.diasPonto.find((registro) => registro.id === item.diaPontoId);
+      if (dia) {
+        Object.assign(dia, item.totais, { apuradoEm });
+      }
+    }
+    return Promise.resolve(itens.length);
   }
 }

@@ -12,12 +12,14 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormArray, FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { Router } from '@angular/router';
 import {
+  type EnviarPeriodoRhResponse,
   type ErroLancamentoResponse,
   type GradeEquipeResponse,
   type ItemLancamentoEquipeRequest,
@@ -41,6 +43,7 @@ import {
   paraMarcacoes,
   replicarHorarios,
 } from './lancamento-form';
+import { type DadosEnvioRh, ModalEnvioRhComponent } from './modal-envio-rh.component';
 import { PontoService } from './ponto.service';
 
 /** Obras suficientes para o seletor; a empresa nao tem centenas de obras. */
@@ -82,6 +85,7 @@ export class PaginaGradePontoComponent {
   private readonly router = inject(Router);
   private readonly notificacao = inject(NotificacaoService);
   private readonly confirmacao = inject(ConfirmacaoService);
+  private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
   private readonly formBuilder = inject(FormBuilder);
 
@@ -382,5 +386,50 @@ export class PaginaGradePontoComponent {
 
   abrirFuncionario(funcionarioId: string): void {
     void this.router.navigate(['/ponto/funcionarios', funcionarioId]);
+  }
+
+  /**
+   * Envia o periodo da equipe ao RH (T-046 / RF-018).
+   *
+   * O modal mostra o resumo de pendencias antes de confirmar: para o
+   * encarregado o envio e de mao unica (RN-06), e ele precisa ver quantos dias
+   * seguem sem lancamento antes de decidir.
+   */
+  enviarAoRh(): void {
+    const grade = this.grade();
+    const periodo = grade?.periodo;
+    if (!grade || !periodo) {
+      return;
+    }
+
+    const referencia = this.dialog.open<
+      ModalEnvioRhComponent,
+      DadosEnvioRh,
+      EnviarPeriodoRhResponse | undefined
+    >(ModalEnvioRhComponent, {
+      data: {
+        periodoId: periodo.id,
+        competencia: periodo.competencia,
+        obraId: grade.obraId,
+        obraNome: grade.obraNome,
+      },
+      width: '32rem',
+      maxWidth: 'calc(100vw - 2rem)',
+      autoFocus: 'dialog',
+      restoreFocus: true,
+    });
+
+    referencia
+      .afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((resposta) => {
+        if (!resposta) {
+          return;
+        }
+        this.notificacao.sucesso(
+          `${resposta.diasEnviados} dia(s) de ${resposta.funcionarios} funcionario(s) enviados ao RH.`,
+        );
+        this.carregar();
+      });
   }
 }

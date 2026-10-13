@@ -2,6 +2,10 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import type {
   AbrirPeriodoRequest,
+  AjustarDiaRequest,
+  AjustarDiaResponse,
+  AjustePontoResponse,
+  EnviarPeriodoRhResponse,
   GerarDiasResponse,
   GradeEquipeResponse,
   LancarEquipeRequest,
@@ -11,6 +15,7 @@ import type {
   PeriodoResponse,
   PontoFuncionarioResponse,
   RespostaPaginada,
+  ResumoEnvioRhResponse,
   StatusPeriodo,
 } from '@sistema/shared';
 import type { Observable } from 'rxjs';
@@ -74,5 +79,30 @@ export class PontoService {
     dados: LancarFuncionarioRequest,
   ): Observable<LancarPontoResponse> {
     return this.http.put<LancarPontoResponse>(`ponto/funcionarios/${funcionarioId}/dias`, dados);
+  }
+
+  /** RF-017. A justificativa e obrigatoria; quem recusa o ajuste e a API. */
+  ajustarDia(diaPontoId: string, dados: AjustarDiaRequest): Observable<AjustarDiaResponse> {
+    return this.http.put<AjustarDiaResponse>(`ponto/dias/${diaPontoId}/ajuste`, dados);
+  }
+
+  /** RF-017. Linha do tempo do dia, do ajuste mais recente para o mais antigo. */
+  historicoDeAjustes(diaPontoId: string): Observable<AjustePontoResponse[]> {
+    return this.http.get<AjustePontoResponse[]>(`ponto/dias/${diaPontoId}/ajustes`);
+  }
+
+  /** RF-018. O que falta na equipe daquela obra antes de enviar ao RH. */
+  resumoEnvio(periodoId: string, obraId: string): Observable<ResumoEnvioRhResponse> {
+    const params = new HttpParams().set('obraId', obraId);
+    return this.http.get<ResumoEnvioRhResponse>(`ponto/periodos/${periodoId}/resumo-envio`, {
+      params,
+    });
+  }
+
+  /** RF-018. Depois do envio o encarregado nao altera mais esses dias (RN-06). */
+  enviarAoRh(periodoId: string, obraId: string): Observable<EnviarPeriodoRhResponse> {
+    return this.http.post<EnviarPeriodoRhResponse>(`ponto/periodos/${periodoId}/envio-rh`, {
+      obraId,
+    });
   }
 }

@@ -1,4 +1,5 @@
 import type {
+  CampoAjuste,
   OcorrenciaDia,
   OrigemMarcacao,
   StatusEnvioDia,
@@ -229,4 +230,172 @@ export interface PontoFuncionarioResponse {
   feriados: Record<string, string>;
   /** Soma dos dias devolvidos, em minutos inteiros. */
   totais: TotaisPontoResponse;
+}
+
+// ---------------------------------------------------------------------------
+// RF-017 - ajuste de marcacao com justificativa e historico
+// ---------------------------------------------------------------------------
+
+/**
+ * A justificativa do ajuste e obrigatoria (RF-017) e precisa dizer algo: um
+ * minimo de caracteres evita o "ok" que nao explica nada seis meses depois,
+ * quando alguem reler o historico.
+ */
+/** Teto de registros devolvidos na linha do tempo de um dia. */
+export const AJUSTE_HISTORICO_LIMITE = 100;
+
+export const AJUSTE_JUSTIFICATIVA_TAMANHO_MINIMO = 10;
+export const AJUSTE_JUSTIFICATIVA_TAMANHO_MAXIMO = 500;
+
+/**
+ * PUT /api/ponto/dias/:diaId/ajuste (RF-017).
+ *
+ * Mesma semantica de campo do lancamento: ausente mantem o que esta gravado,
+ * `null` apaga a marcacao. A diferenca e a justificativa, que aqui e exigida, e
+ * o historico, que registra campo a campo o que mudou.
+ */
+export interface AjustarDiaRequest extends MarcacoesLancamentoRequest {
+  justificativa: string;
+  ocorrencia?: OcorrenciaDia;
+  observacao?: string | null;
+}
+
+/** Uma alteracao registrada no historico do dia (RF-017). */
+export interface AjustePontoResponse {
+  id: string;
+  /** Campo alterado: uma das quatro marcacoes, a ocorrencia ou a observacao. */
+  campo: CampoAjuste;
+  /** "HH:MM" da marcacao, ou o texto anterior; nulo quando nao existia. */
+  valorAnterior: string | null;
+  /** "HH:MM" da marcacao, ou o texto novo; nulo quando foi apagada. */
+  valorNovo: string | null;
+  justificativa: string;
+  usuarioNome: string;
+  criadoEm: string;
+}
+
+/** Resposta do ajuste: o dia recalculado e a linha do tempo completa. */
+export interface AjustarDiaResponse {
+  dia: DiaPontoResponse;
+  historico: AjustePontoResponse[];
+}
+
+// ---------------------------------------------------------------------------
+// RF-018 - envio do periodo da equipe ao RH
+// ---------------------------------------------------------------------------
+
+/** Teto de funcionarios listados no resumo de pendencias do envio. */
+export const PONTO_MAXIMO_PENDENCIAS_RESUMO = 50;
+
+/** O que falta na equipe antes de o periodo seguir para o RH (RF-018). */
+export interface PendenciaEnvioResponse {
+  funcionarioId: string;
+  funcionarioNome: string;
+  matricula: string;
+  /** Dias normais do periodo sem nenhuma marcacao, em "AAAA-MM-DD". */
+  diasSemLancamento: string[];
+  /** Dias com marcacao incompleta (sem entrada ou sem saida). */
+  diasIncompletos: string[];
+}
+
+/** GET /api/ponto/periodos/:id/resumo-envio (RF-018). */
+export interface ResumoEnvioRhResponse {
+  periodo: PeriodoResponse;
+  obraId: string;
+  obraNome: string;
+  funcionarios: number;
+  /** Dias da equipe ja gerados no periodo. */
+  dias: number;
+  diasNaoEnviados: number;
+  diasEnviados: number;
+  /** Soma de dias sem lancamento e incompletos de toda a equipe. */
+  totalPendencias: number;
+  /** Limitada a PONTO_MAXIMO_PENDENCIAS_RESUMO funcionarios. */
+  pendencias: PendenciaEnvioResponse[];
+  /** Verdadeiro quando o usuario da requisicao ainda pode enviar (RN-06, RN-07). */
+  podeEnviar: boolean;
+  motivoBloqueio: string | null;
+}
+
+/** POST /api/ponto/periodos/:id/envio-rh (RF-018). */
+export interface EnviarPeriodoRhRequest {
+  obraId: string;
+}
+
+export interface EnviarPeriodoRhResponse {
+  periodo: PeriodoResponse;
+  /** Dias que passaram de NAO_ENVIADO para ENVIADO_RH agora. */
+  diasEnviados: number;
+  funcionarios: number;
+  /** Pendencias que seguiram junto, para o RH saber o que conferir. */
+  totalPendencias: number;
+}
+
+// ---------------------------------------------------------------------------
+// RF-019 - importacao de marcacoes por CSV
+// ---------------------------------------------------------------------------
+
+/**
+ * Colunas aceitas no cabecalho, ja normalizadas (sem acento, caixa ou
+ * separador): "Saida_Intervalo" e "saída intervalo" chegam como
+ * "saidaintervalo".
+ *
+ * Uma linha por dia de cada funcionario. `matricula` ou `cpf` identificam a
+ * pessoa - pelo menos uma das duas e obrigatoria no cabecalho.
+ */
+export const IMPORTACAO_MARCACOES_COLUNAS = [
+  'matricula',
+  'cpf',
+  'data',
+  'entrada',
+  'saidaintervalo',
+  'retornointervalo',
+  'saida',
+  'ocorrencia',
+  'observacao',
+] as const;
+
+/** Teto de linhas por arquivo. Acima disso a API recusa o CSV. */
+export const IMPORTACAO_MARCACOES_MAXIMO_LINHAS = 5000;
+/** Teto de tamanho do arquivo enviado, em bytes. */
+export const IMPORTACAO_MARCACOES_TAMANHO_MAXIMO_BYTES = 2 * 1024 * 1024;
+/** Extensoes aceitas no upload. */
+export const IMPORTACAO_MARCACOES_EXTENSOES = ['.csv'] as const;
+
+export interface ErroImportacaoMarcacao {
+  /** Linha do arquivo, contando o cabecalho como linha 1. */
+  linha: number;
+  campo: string | null;
+  mensagem: string;
+}
+
+/** Linha aceita, como ficara gravada. Sem CPF: a identificacao ja foi resolvida. */
+export interface PreviaMarcacaoImportada {
+  linha: number;
+  funcionarioId: string;
+  funcionarioNome: string;
+  matricula: string;
+  /** "AAAA-MM-DD". */
+  data: string;
+  entrada: string | null;
+  saidaIntervalo: string | null;
+  retornoIntervalo: string | null;
+  saida: string | null;
+  ocorrencia: OcorrenciaDia;
+}
+
+/**
+ * Relatorio da importacao de marcacoes (RF-019).
+ *
+ * Mesmo criterio da importacao de funcionarios (RF-012): grava somente as
+ * linhas sem erro e aponta linha, campo e motivo de cada recusa. Uma data
+ * errada no meio do arquivo nao descarta o resto do trabalho.
+ */
+export interface ImportarMarcacoesResponse {
+  totalLinhas: number;
+  gravados: number;
+  /** Linhas recusadas (linhas distintas com erro). */
+  comErro: number;
+  itens: PreviaMarcacaoImportada[];
+  erros: ErroImportacaoMarcacao[];
 }

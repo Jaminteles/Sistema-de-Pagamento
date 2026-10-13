@@ -3,17 +3,18 @@ import {
   aceitaMarcacao,
   type CampoLancamento,
   type ErroLancamentoResponse,
-  horaParaMinutos,
   type LancarPontoResponse,
-  MINUTOS_NO_DIA,
   OcorrenciaDia,
   OCORRENCIA_DIA_LABEL,
   ORDEM_MARCACAO,
+  OrigemMarcacao,
   type TipoMarcacao,
 } from '@sistema/shared';
+import { ApuracaoService } from '../apuracao/apuracao.service';
 import type { UsuarioRequisicao } from '../auth/tipos';
 import { adicionarDias, dateParaDataIso } from '../common/data/data-iso';
 import { horaLocalParaInstante } from '../common/data/fuso-negocio';
+import { mesclarMarcacoes } from './marcacoes-do-dia';
 import { bloqueioDeEscrita, paraDiaResponse, podeEscrever } from './ponto.resposta';
 import {
   type DiaPontoRegistro,
@@ -24,7 +25,6 @@ import {
 } from './ponto.repository';
 import {
   type MarcacaoResolvida,
-  type MarcacoesDigitadas,
   validarMarcacoes,
   validarSobreposicao,
 } from './validacao-marcacoes';
@@ -47,6 +47,8 @@ export interface EntradaLancamento {
 /** Escopo da operacao: `null` em obrasPermitidas significa sem restricao. */
 export interface EscopoLancamento {
   obrasPermitidas: readonly string[] | null;
+  /** Origem gravada nas marcacoes. Padrao MANUAL; a importacao usa IMPORTADO. */
+  origem?: OrigemMarcacao;
 }
 
 interface Preparado {
@@ -86,7 +88,10 @@ function chave(funcionarioId: string, dataIso: string): string {
  */
 @Injectable()
 export class LancamentoService {
-  constructor(private readonly repositorio: PontoRepository) {}
+  constructor(
+    private readonly repositorio: PontoRepository,
+    private readonly apuracao: ApuracaoService,
+  ) {}
 
   async aplicar(
     usuario: UsuarioRequisicao,
@@ -135,7 +140,13 @@ export class LancamentoService {
 
     const aceitos = this.filtrarSobreposicoes(preparados, diasExistentes, erros);
 
-    const salvos = await this.repositorio.salvar(aceitos.map((item) => this.paraGravavel(item)));
+    const gravados = await this.repositorio.salvar(
+      aceitos.map((item) => this.paraGravavel(item, escopo.origem ?? OrigemMarcacao.MANUAL)),
+    );
+
+    // Apura na sequencia da gravacao (RF-020): a tela nunca mostra marcacao nova
+    // com total velho ao lado.
+    const salvos = await this.apuracao.apurar(gravados);
 
     const dias = salvos.map((dia) =>
       paraDiaResponse(
@@ -241,7 +252,7 @@ export class LancamentoService {
 
     const ocorrencia = entrada.ocorrencia ?? diaAtual?.ocorrencia ?? OcorrenciaDia.NORMAL;
 
-    const digitadas = this.mesclarMarcacoes(entrada, diaAtual);
+    const digitadas = mesclarMarcacoes(entrada.horarios, diaAtual, dataIso);
     if (digitadas === null) {
       return registrar('OCORRENCIA', 'Informe o horario em HH:MM.');
     }
@@ -270,7 +281,7 @@ export class LancamentoService {
       };
     }
 
-    const validacao = validarMarcacoes(digitadas.valores, {
+    const validacao = validarMarcacoes(digitadas, {
       // Zero quando a jornada nao preve intervalo: cobrar minimo de quem nao
       // tem intervalo cadastrado recusaria lancamento valido.
       intervaloMinimoMinutos: Math.max(0, vinculo.jornada.intervaloMinutos),
@@ -300,50 +311,6 @@ export class LancamentoService {
       resolvidas: validacao.marcacoes,
       remover: ORDEM_MARCACAO.filter((tipo) => !presentes.has(tipo)),
     };
-  }
-
-  /**
-   * Combina o que foi digitado com o que esta gravado.
-   *
-   * Devolve `null` quando algum horario veio fora de "HH:MM" - o DTO ja barra
-   * isso, e esta checagem existe para o service nao confiar no formato.
-   */
-  private mesclarMarcacoes(
-    entrada: EntradaLancamento,
-    diaAtual: DiaPontoRegistro | null,
-  ): { valores: MarcacoesDigitadas } | null {
-    const valores: MarcacoesDigitadas = {};
-
-    for (const tipo of ORDEM_MARCACAO) {
-      const informado = entrada.horarios[tipo];
-
-      if (informado === null) {
-        continue;
-      }
-
-      if (typeof informado === 'string') {
-        const minutos = horaParaMinutos(informado);
-        if (minutos === null) {
-          return null;
-        }
-        valores[tipo] = minutos;
-        continue;
-      }
-
-      const gravada = diaAtual?.marcacoes.find((item) => item.tipo === tipo);
-      if (gravada) {
-        valores[tipo] = this.minutosNoDia(gravada.horario, diaAtual as DiaPontoRegistro);
-      }
-    }
-
-    return { valores };
-  }
-
-  /** Minutos de parede da marcacao, de 0 a 1439, como o usuario a enxerga. */
-  private minutosNoDia(horario: Date, dia: DiaPontoRegistro): number {
-    const meiaNoite = horaLocalParaInstante(dateParaDataIso(dia.data), 0).getTime();
-    const diferenca = Math.round((horario.getTime() - meiaNoite) / 60_000);
-    return ((diferenca % MINUTOS_NO_DIA) + MINUTOS_NO_DIA) % MINUTOS_NO_DIA;
   }
 
   private observacaoFinal(
@@ -452,7 +419,7 @@ export class LancamentoService {
     };
   }
 
-  private paraGravavel(preparado: Preparado): LancamentoGravavel {
+  private paraGravavel(preparado: Preparado, origem: OrigemMarcacao): LancamentoGravavel {
     return {
       periodoId: preparado.periodo.id,
       funcionarioId: preparado.entrada.funcionarioId,
@@ -462,6 +429,7 @@ export class LancamentoService {
       marcacoes: preparado.resolvidas.map((marcacao) => ({
         tipo: marcacao.tipo,
         horario: horaLocalParaInstante(preparado.dataIso, marcacao.absoluto),
+        origem,
       })),
       remover: preparado.remover,
     };
